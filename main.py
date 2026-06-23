@@ -156,6 +156,68 @@ async def check_recitation(req: RecitationCheck):
     return {"expected_text": expected_text, "transcribed_text": req.transcribed_text, **result}
 
 
+@app.get("/page/{page_number}")
+async def get_page_words(page_number: int, riwaya: str = "hafs"):
+    """Fetch all words on a Quran page (Madina Mushaf layout, 604 pages)."""
+    page_number = max(1, min(604, page_number))
+    url = (
+        f"{QURAN_API_BASE}/verses/by_page/{page_number}"
+        f"?words=true&word_fields=text_uthmani&per_page=50"
+        f"&fields=chapter_id,verse_number,verse_key"
+    )
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, timeout=15.0)
+    if resp.status_code != 200:
+        raise HTTPException(500, f"فشل تحميل الصفحة {page_number}")
+    data = resp.json()
+    verses_out = []
+    for verse in data.get("verses", []):
+        surah_id = verse.get("chapter_id", 1)
+        verse_num = verse.get("verse_number", 1)
+        verse_key = verse.get("verse_key", f"{surah_id}:{verse_num}")
+        raw_words = verse.get("words", [])
+        words = [
+            w.get("text_uthmani", "")
+            for w in raw_words
+            if w.get("char_type_name") == "word"
+        ]
+        verses_out.append({
+            "surah": surah_id,
+            "ayah": verse_num,
+            "verse_key": verse_key,
+            "words": words,
+        })
+    return {
+        "page": page_number,
+        "total_pages": 604,
+        "riwaya": riwaya,
+        "verses": verses_out,
+    }
+
+
+@app.get("/surah/{surah_id}/meta")
+async def get_surah_meta(surah_id: int):
+    """Get surah metadata including its first/last page in Madina Mushaf."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{QURAN_API_BASE}/chapters/{surah_id}?language=ar",
+            timeout=10.0,
+        )
+    if resp.status_code != 200:
+        raise HTTPException(404, "السورة غير موجودة")
+    ch = resp.json().get("chapter", {})
+    pages = ch.get("pages", [1, 1])
+    return {
+        "id": ch.get("id"),
+        "name_arabic": ch.get("name_arabic", ""),
+        "name_simple": ch.get("name_simple", ""),
+        "verses_count": ch.get("verses_count", 7),
+        "first_page": pages[0] if pages else 1,
+        "last_page": pages[1] if len(pages) > 1 else (pages[0] if pages else 1),
+        "revelation_place": ch.get("revelation_place", "makkah"),
+    }
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "app": "المثابة"}
