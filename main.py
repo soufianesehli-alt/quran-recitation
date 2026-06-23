@@ -1,3 +1,5 @@
+import asyncio
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="Quran Recitation API")
+app = FastAPI(title="المثابة — Quran API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,119 +20,126 @@ app.add_middleware(
 )
 
 claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
 QURAN_API_BASE = "https://api.quran.com/api/v4"
 
-EDITIONS = {
-    "hafs": "quran-uthmani",
-    "warsh": "quran-warsh-hafs",
-}
+
+# ── Models ────────────────────────────────────────────────────────────────────
+
+class WordCheckRequest(BaseModel):
+    spoken: str          # word recognized by STT
+    expected: str        # expected Quran word
+    surah: int
+    ayah: int
+    riwaya: str = "hafs"
 
 
 class RecitationCheck(BaseModel):
     surah: int
     ayah: int
-    riwaya: str  # "hafs" or "warsh"
+    riwaya: str
     transcribed_text: str
 
 
-class VerseRequest(BaseModel):
-    surah: int
-    ayah: int
-    riwaya: str
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-
-@app.get("/verse")
-async def get_verse(surah: int, ayah: int, riwaya: str = "hafs"):
-    edition = EDITIONS.get(riwaya, EDITIONS["hafs"])
-    url = f"{QURAN_API_BASE}/verses/by_key/{surah}:{ayah}?words=true&translation_fields=text&word_fields=text_uthmani,text_imlaei"
-
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(url)
+async def _fetch_verse_words(client: httpx.AsyncClient, surah: int, ayah: int) -> dict | None:
+    url = (
+        f"{QURAN_API_BASE}/verses/by_key/{surah}:{ayah}"
+        f"?words=true&word_fields=text_uthmani,text_imlaei"
+    )
+    try:
+        resp = await client.get(url, timeout=12.0)
         if resp.status_code != 200:
-            raise HTTPException(500, "Failed to fetch verse from Quran API")
+            return None
         data = resp.json()
-
-    verse = data.get("verse", {})
-    words = verse.get("words", [])
-    text = " ".join(w.get("text_uthmani", "") for w in words if w.get("char_type_name") == "word")
-
-    # For Warsh, fetch the warsh-specific edition
-    if riwaya == "warsh":
-        url2 = f"{QURAN_API_BASE}/verses/by_key/{surah}:{ayah}?words=false&translations=131"
-        async with httpx.AsyncClient() as client:
-            resp2 = await client.get(url2)
-            if resp2.status_code == 200:
-                data2 = resp2.json()
-                warsh_text = data2.get("verse", {}).get("translations", [{}])[0].get("text", text)
-                text = warsh_text if warsh_text else text
-
-    return {
-        "surah": surah,
-        "ayah": ayah,
-        "riwaya": riwaya,
-        "text": text,
-        "words": [w.get("text_uthmani", "") for w in words if w.get("char_type_name") == "word"],
-    }
+        verse = data.get("verse", {})
+        raw_words = verse.get("words", [])
+        words = [
+            w.get("text_uthmani", "")
+            for w in raw_words
+            if w.get("char_type_name") == "word"
+        ]
+        return {
+            "surah": surah,
+            "ayah": ayah,
+            "words": words,
+            "text": " ".join(words),
+        }
+    except Exception:
+        return None
 
 
-@app.get("/surah/{surah_number}/info")
-async def get_surah_info(surah_number: int):
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{QURAN_API_BASE}/chapters/{surah_number}")
-        if resp.status_code != 200:
-            raise HTTPException(500, "Failed to fetch surah info")
-        return resp.json()
-
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.get("/surahs")
 async def list_surahs():
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{QURAN_API_BASE}/chapters?language=ar")
         if resp.status_code != 200:
-            raise HTTPException(500, "Failed to fetch surahs list")
+            raise HTTPException(500, "فشل تحميل قائمة السور")
         return resp.json()
+
+
+@app.get("/verses/range")
+async def get_verses_range(surah: int, start_ayah: int, end_ayah: int, riwaya: str = "hafs"):
+    """Fetch multiple verses in parallel — core endpoint for real-time recitation."""
+    start = max(1, start_ayah)
+    end = max(start, end_ayah)
+
+    async with httpx.AsyncClient() as client:
+        tasks = [_fetch_verse_words(client, surah, a) for a in range(start, end + 1)]
+        results = await asyncio.gather(*tasks)
+
+    verses = [r for r in results if r is not None]
+    verses.sort(key=lambda v: v["ayah"])
+    return {"verses": verses, "surah": surah, "riwaya": riwaya}
+
+
+@app.get("/verse")
+async def get_verse(surah: int, ayah: int, riwaya: str = "hafs"):
+    async with httpx.AsyncClient() as client:
+        result = await _fetch_verse_words(client, surah, ayah)
+    if result is None:
+        raise HTTPException(500, "فشل تحميل الآية")
+    return {**result, "riwaya": riwaya}
+
+
+@app.post("/tajweed/explain")
+async def explain_tajweed_error(req: WordCheckRequest):
+    """Ask Claude to explain a tajweed error for the blocked word."""
+    riwaya_name = "حفص عن عاصم" if req.riwaya == "hafs" else "ورش عن نافع"
+    prompt = (
+        f"في رواية {riwaya_name}، قرأ المستخدم كلمة «{req.spoken}» "
+        f"بدلاً من «{req.expected}» في الآية {req.ayah} من سورة رقم {req.surah}.\n"
+        "اشرح الفرق باختصار (جملة واحدة) وقدم نصيحة تجويدية عملية."
+    )
+    message = claude.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=200,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return {"explanation": message.content[0].text}
 
 
 @app.post("/check")
 async def check_recitation(req: RecitationCheck):
-    # Fetch expected verse text
+    """Full verse analysis — used for summary after completing a verse."""
     verse_data = await get_verse(req.surah, req.ayah, req.riwaya)
     expected_text = verse_data["text"]
-
     riwaya_name = "حفص عن عاصم" if req.riwaya == "hafs" else "ورش عن نافع"
 
     prompt = f"""أنت متخصص في علم التجويد والقراءات القرآنية.
-المستخدم يتلو الآية {req.ayah} من سورة رقم {req.surah} برواية {riwaya_name}.
+رواية {riwaya_name} — سورة {req.surah} آية {req.ayah}.
 
-النص المتوقع (رواية {riwaya_name}):
-{expected_text}
+النص المتوقع: {expected_text}
+ما تلاه المستخدم: {req.transcribed_text}
 
-ما تلاه المستخدم (تفريغ الصوت):
-{req.transcribed_text}
-
-قم بمقارنة ما تلاه المستخدم بالنص المتوقع وحدد:
-1. هل التلاوة صحيحة؟
-2. قائمة الأخطاء إن وجدت مع:
-   - الكلمة الخاطئة
-   - الكلمة الصحيحة
-   - نوع الخطأ (خطأ في الرواية / خطأ في التجويد / نقص / زيادة)
-   - الحكم التجويدي المخالف إن وجد
-
-أجب بصيغة JSON فقط بالشكل التالي:
+أجب بـ JSON فقط:
 {{
   "is_correct": true/false,
   "score": 0-100,
-  "errors": [
-    {{
-      "wrong_word": "...",
-      "correct_word": "...",
-      "error_type": "...",
-      "rule": "...",
-      "explanation": "..."
-    }}
-  ],
-  "general_feedback": "..."
+  "errors": [{{"wrong_word":"","correct_word":"","error_type":"","rule":"","explanation":""}}],
+  "general_feedback": ""
 }}"""
 
     message = claude.messages.create(
@@ -138,30 +147,15 @@ async def check_recitation(req: RecitationCheck):
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
-
-    import json
+    text = message.content[0].text
     try:
-        response_text = message.content[0].text
-        # Extract JSON from response
-        start = response_text.find("{")
-        end = response_text.rfind("}") + 1
-        result = json.loads(response_text[start:end])
+        result = json.loads(text[text.find("{"):text.rfind("}") + 1])
     except Exception:
-        result = {
-            "is_correct": False,
-            "score": 0,
-            "errors": [],
-            "general_feedback": message.content[0].text,
-        }
+        result = {"is_correct": False, "score": 0, "errors": [], "general_feedback": text}
 
-    return {
-        "expected_text": expected_text,
-        "transcribed_text": req.transcribed_text,
-        "riwaya": req.riwaya,
-        **result,
-    }
+    return {"expected_text": expected_text, "transcribed_text": req.transcribed_text, **result}
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "app": "المثابة"}
