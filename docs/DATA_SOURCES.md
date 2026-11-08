@@ -81,3 +81,61 @@ No external dataset. Rules are written in `assets/rules/{hafs,warsh}.yaml` from 
    the product owner downloads the KFGQPC files in a browser and shares them.
 2. ~~KFGQPC decision~~: decided. Build now and request written permission in parallel. Nothing
    goes to the Play Store until the terms are clear or permission arrives.
+
+## 6. Phase 2 findings (2026-11-08)
+
+### 6.1 Hafs: built ✅
+`app/assets/quran/hafs.sqlite` comes from Tanzil Uthmani 1.1 (files and hashes in
+`tools/sources/tanzil/SOURCE.md`).
+
+- 114 surahs and 6236 ayahs. Each surah's count matches Tanzil's own `quran-data.xml`.
+- 77,433 words, 4,364 pause signs, 112 basmala prefixes.
+- Every word is an exact substring of the untouched source line, checked on every build.
+
+**Basmala.** Tanzil prefixes the basmala to ayah 1 of surahs 2–114, except 9.
+- It stays in `ayahs.text_uthmani` exactly as in the source.
+- `basmala_prefix_chars` records its length.
+- It is excluded from `words`, because it is not part of the ayah in the Kufan count.
+
+**For review (`TODO-VERIFY` with Tanzil and the muqriʾ):**
+1. In **surahs 95 and 97** the Tanzil basmala starts `بِّسْمِ`, with a **shadda** on the bāʾ.
+   In the other 110 it starts `بِسْمِ`. Left as is (no modification allowed). Detection
+   compares normalized keys, so these two are handled correctly.
+2. The sakta sign `ۜ` stands alone after **five** words: 18:1 `عِوَجَا`, 36:52 `مَرْقَدِنَا`
+   (followed by a pause sign as well), 69:28 `مَالِيَهْ`, 75:27 `مَنْ`, 83:14 `بَلْ`.
+   The spec (§6) lists four saktat. The fifth position (69:28) must be classified by the muqriʾ
+   before any sakta rule uses it.
+3. Inside a word, `ۜ` is the sīn-over-ṣād spelling sign (2:245 `وَيَبْصُۜطُ`, 7:69 `بَصْۜطَةً`).
+   It is not read as a pause sign.
+
+### 6.2 Warsh: pipeline ready, DB **not** built ⛔
+- The KFGQPC servers still reject this cloud: TLS "unrecognized name" on `fonts.*` and no
+  response from `qurancomplex.gov.sa`. The decision stands: the Warsh text must come from the
+  official download.
+- I validated the parser on the **unofficial** mirror `ibnhazm/KFGQPC` (Warsh data v10,
+  2021-08-05), in a scratch build only. Nothing from the mirror is committed. Results: 114
+  surahs, **6214 ayahs**, 1:1 = `اِ۬لْحَمْدُ` (the basmala is not counted), Al-Fātiḥa has 7
+  ayahs with 1:6 ending at `عَلَيْهِمْ`, Al-Baqarah has 285.
+- Format facts the build handles:
+  - The text uses the **KFGQPC font encoding**, so it must be shown with the KFGQPC Warsh font.
+  - Each `aya_text` ends with a non-breaking space and the ayah number.
+  - Pause signs are attached to the word (U+06D6 is used for all of them).
+  - `ے` (U+06D2) is the dotless yāʾ, e.g. `فِے`.
+- KFGQPC publishes **no separate per-surah ayah counts**, so the build can only check
+  contiguity and the total. **`TODO-VERIFY`**: an independent per-surah Madani count is needed
+  to cross-check (from the printed Warsh mushaf or a KFGQPC document).
+
+To build Warsh: download the official KFGQPC Warsh Uthmanic data (JSON) and font, then run
+```
+python3 tools/build_quran_db.py warsh --text <warshData_vN.json> --version N --license "<official terms>" --out app/assets/quran/warsh.sqlite
+WARSH_JSON=<warshData_vN.json> python3 -m pytest tools/tests
+```
+Then add the DB to `pubspec.yaml`.
+
+### 6.3 Fonts: pending ⛔
+Nothing is bundled yet.
+- The **Warsh text cannot render correctly without the KFGQPC Warsh font**, because of its
+  encoding.
+- For Hafs, the Tanzil text needs a font that supports the Quranic marks. The KFGQPC Hafs font
+  is blocked the same way.
+- I am not substituting another font without the product owner's approval (§2).

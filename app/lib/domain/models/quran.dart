@@ -56,7 +56,8 @@ class Word {
   /// Matching key produced by the Arabic normalizer. Never shown to the user.
   final String normalized;
 
-  /// Waqf sign that follows this word, if any (segments re-recitation, docs/SPEC.md §7).
+  /// Pause sign(s) after this word, in source order (may hold several, e.g. sakta + pause
+  /// at Hafs 36:52). Segments re-recitation (docs/SPEC.md §7).
   final String? waqfMark;
 }
 
@@ -65,9 +66,17 @@ class Ayah {
     required this.ref,
     required this.textUthmani,
     required this.words,
+    this.basmalaPrefixChars = 0,
   });
 
   final AyahRef ref;
+
+  /// Verbatim source text. For Tanzil this includes the basmala prefix of ayah 1.
   final String textUthmani;
+
+  /// The ayah's own words (the basmala prefix is excluded).
   final List<Word> words;
+
+  /// Length of the basmala prefix in [textUthmani], 0 if none.
+  final int basmalaPrefixChars;
 }

@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased] — Phase 2: data (2026-11-08)
+### Added
+- `tools/build_quran_db.py` + `tools/quran_db/`: per-riwaya SQLite builder (Tanzil txt and KFGQPC
+  JSON parsers). Text is stored verbatim; the build fails on any integrity problem (surah and
+  ayah contiguity, counts vs source metadata, verbatim word spans, basmala prefixes).
+- Arabic matching normalizer in Python (`tools/quran_db/normalizer.py`) and Dart
+  (`app/lib/core/arabic/normalizer.dart`), with shared vectors `tools/normalizer_vectors.json`.
+- `app/assets/quran/hafs.sqlite` (Tanzil Uthmani 1.1, 6236 ayahs) and its verbatim sources in
+  `tools/sources/tanzil/` with provenance and hashes.
+- `QuranRepository` (sqflite, read-only) and `Ayah.basmalaPrefixChars`.
+- Tests: 12 pytest (+1 Warsh test, enabled with `WARSH_JSON`), and Dart repository
+  integrity plus normalizer parity over all 77,433 words.
+### Not done
+- Warsh DB: waiting for the official KFGQPC download (servers unreachable from the cloud).
+- Fonts: waiting for KFGQPC fonts or a product-owner decision.
+
 ## [Unreleased] — Phase 1: audit + architecture (2026-11-08)
 ### Added
 - `docs/SPEC.md` (single source of truth), `docs/AUDIT.md`, `docs/ARCHITECTURE.md`,

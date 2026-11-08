@@ -1,0 +1,27 @@
+{
+  "_comment": "Shared test vectors for tools/quran_db/normalizer.py and app/lib/core/arabic/normalizer.dart. Inputs are real tokens copied from the Tanzil Uthmani text (hafs) and the KFGQPC Warsh v10 data (warsh); expected values follow the rules documented in normalizer.py.",
+  "vectors": [
+    {"src": "hafs", "in": "ٱلرَّحْمَـٰنِ", "out": "الرحمن"},
+    {"src": "hafs", "in": "مَـٰلِكِ", "out": "ملك"},
+    {"src": "hafs", "in": "ٱلضَّآلِّينَ", "out": "الضالين"},
+    {"src": "hafs", "in": "إِيَّاكَ", "out": "اياك"},
+    {"src": "hafs", "in": "وَرَسُولِهِۦٓ", "out": "ورسوله"},
+    {"src": "hafs", "in": "بَرَآءَةٌ", "out": "براءه"},
+    {"src": "hafs", "in": "ذَٰلِكَ", "out": "ذلك"},
+    {"src": "hafs", "in": "الٓمٓ", "out": "الم"},
+    {"src": "hafs", "in": "بِّسْمِ", "out": "بسم"},
+    {"src": "hafs", "in": "ۛ", "out": ""},
+    {"src": "hafs", "in": "مَلِكِ", "out": "ملك"},
+    {"src": "warsh", "in": "اِ۬لْحَمْدُ", "out": "الحمد"},
+    {"src": "warsh", "in": "لِلهِ", "out": "لله"},
+    {"src": "warsh", "in": "مَلِكِ", "out": "ملك"},
+    {"src": "warsh", "in": "اِ۬لدِّينِۖ", "out": "الدين"},
+    {"src": "warsh", "in": "يُومِنُونَ", "out": "يومنون"},
+    {"src": "warsh", "in": "اَ۬لصَّلَوٰةَ", "out": "الصلوه"},
+    {"src": "warsh", "in": "هُدىٗ", "out": "هدي"},
+    {"src": "warsh", "in": "فِے", "out": "في"},
+    {"src": "warsh", "in": "شَےْءٖ", "out": "شيء"},
+    {"src": "warsh", "in": "أَلَٓمِّٓۖ", "out": "الم"},
+    {"src": "warsh", "in": "١", "out": ""}
+  ]
+}

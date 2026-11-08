@@ -106,6 +106,21 @@ abstract class RecitationEngine {
 In the current code the gate threshold (0.90) is a constructor parameter of `AyahGate`. It moves
 to settings in Phase 3.
 
+## 4.3 Quran data (Phase 2)
+
+One SQLite file per riwaya (`app/assets/quran/{riwaya}.sqlite`), schema v1:
+
+| Table | Columns |
+|---|---|
+| `meta` | key/value: riwaya, numbering, source, source_url, version, license, copyright_notice, source_sha256, counts |
+| `surahs` | surah, name_ar, ayah_count |
+| `ayahs` | surah, ayah, text_uthmani (verbatim), basmala_prefix_chars |
+| `words` | surah, ayah, word_index, uthmani (verbatim substring), normalized (matching key), waqf_mark (sign or signs, in order) |
+
+`QuranRepository.openBundled` copies the asset to the app's DB directory once, then opens it
+read-only. The Python and Dart normalizers are kept identical by shared vectors and by a check
+over every word in the DB.
+
 ## 5. Gating and session state machine
 
 ```
