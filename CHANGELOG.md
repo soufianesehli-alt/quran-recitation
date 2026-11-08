@@ -12,9 +12,11 @@
 - `QuranRepository` (sqflite, read-only) and `Ayah.basmalaPrefixChars`.
 - Tests: 12 pytest (+1 Warsh test, enabled with `WARSH_JSON`), and Dart repository
   integrity plus normalizer parity over all 77,433 words.
+- Amiri Quran font (OFL 1.1) as the approved Hafs fallback, with its license registered in the
+  app. `QuranFonts.familyFor` gives no fallback for Warsh.
 ### Not done
-- Warsh DB: waiting for the official KFGQPC download (servers unreachable from the cloud).
-- Fonts: waiting for KFGQPC fonts or a product-owner decision.
+- Warsh DB and Warsh font: waiting for the official KFGQPC download (servers unreachable from
+  the cloud).
 
 ## [Unreleased] — Phase 1: audit + architecture (2026-11-08)
 ### Added

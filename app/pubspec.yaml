@@ -26,3 +26,10 @@ flutter:
     # Quran DBs built by tools/build_quran_db.py (warsh.sqlite added once the official
     # KFGQPC files are available, see docs/DATA_SOURCES.md).
     - assets/quran/hafs.sqlite
+    - assets/fonts/AmiriQuran-OFL.txt
+  fonts:
+    # Fallback Hafs font (approved by the product owner). Replaced by the KFGQPC Hafs font if
+    # its terms allow. Warsh REQUIRES the KFGQPC Warsh font (font-specific text encoding).
+    - family: AmiriQuran
+      fonts:
+        - asset: assets/fonts/AmiriQuran-Regular.ttf

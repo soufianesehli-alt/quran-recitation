@@ -47,6 +47,7 @@ Decisions to confirm (Phase 2):
 
 | Source | What we know | Status |
 |---|---|---|
+| Amiri Quran (Hafs fallback) | **OFL 1.1, verified.** See §6.3 | ✅ bundled |
 | KFGQPC Uthmanic Hafs font | Two conflicting texts are in circulation. (a) ScanCode's "Uthmanic Script License": the font is the Complex's property and "may not be reproduced, modified without the express written approval". (b) A 2009 EULA mirrored on OpenHub: free to use, copy and distribute, with conditions. | `TODO-VERIFY` the "Usage Rights" clause on the official font page |
 | KFGQPC Uthmanic Warsh font (v2.1 on the Complex's Warsh page) | Download page exists. License text not read. | `TODO-VERIFY` |
 | `github.com/nuqayah/qpc-fonts` (mirror) | Mostly **page fonts that use one glyph per word** (QPC mushaf fonts), plus "various" fonts. Its license link points to `dm.qurancomplex.gov.sa/copyright-2/` (not read). | Not used. Page-glyph fonts do not fit word-level highlighting on Unicode text. |
@@ -132,8 +133,24 @@ WARSH_JSON=<warshData_vN.json> python3 -m pytest tools/tests
 ```
 Then add the DB to `pubspec.yaml`.
 
-### 6.3 Fonts: pending ⛔
-Nothing is bundled yet.
+### 6.3 Fonts
+**Hafs: Amiri Quran ✅** (fallback approved by the product owner on 2026-11-08)
+- Source: Google Fonts repository `google/fonts/ofl/amiriquran/` (Amiri 1.003, Khaled Hosny and
+  Sebastian Kosch).
+- License **SIL Open Font License 1.1**, read from the shipped `OFL.txt`: "Copyright 2010-2022
+  The Amiri Quran Project Authors (https://github.com/aliftype/amiri)."
+- Bundled as `app/assets/fonts/AmiriQuran-Regular.ttf`
+  (sha256 `e2a47644762d16bdfb6d33e0d8db8c6ff30beae84150ef5a705316bbd829455c`) with
+  `AmiriQuran-OFL.txt`. The license is registered with the app's license screen.
+- Coverage: all 70 distinct characters of the Tanzil Hafs text have glyphs (checked with
+  fontTools). A visual check of 1:1–1:4, 2:2, 2:245, 18:1 and 36:52 shows harakat, superscript
+  alef, pause signs, the sakta sign and the sin-over-sad sign all placed correctly.
+- Will be replaced by the KFGQPC Hafs font if its terms allow.
+
+**Warsh: pending ⛔.** There is no fallback, by design (`QuranFonts.familyFor(warsh) == null`).
+Text in the KFGQPC encoding needs the KFGQPC Warsh font.
+
+Earlier notes:
 - The **Warsh text cannot render correctly without the KFGQPC Warsh font**, because of its
   encoding.
 - For Hafs, the Tanzil text needs a font that supports the Quranic marks. The KFGQPC Hafs font
