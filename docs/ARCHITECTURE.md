@@ -165,6 +165,6 @@ The acoustic model is shared.
 | 2 | Committed `.env`, `venv/`, `__pycache__/` | Untracked (commit 4650266). The owner rotates the Anthropic key and sets `ANTHROPIC_API_KEY` in Render **before merging**. |
 | 3a | Access to official text and fonts | Personal cloud environment "quran-recitation" allows tanzil.net and the qurancomplex.gov.sa hosts. Tanzil works. The KFGQPC servers reject this cloud (fallback: owner downloads the files). |
 | 3b | KFGQPC terms | Build now. The owner requests written permission in parallel. No Play Store release until the terms are clear. |
-| 4a | Reference benchmark device | The owner's own phone. Model and RAM still to be given before Phase 3. |
+| 4a | Target devices | **All Android phones, Android 7.0+ (API 24), arm64-v8a, armeabi-v7a and x86_64.** Device tiers (low, mid, high) with a model per tier and a degraded per-segment mode when live latency can't be met. The app never refuses to run. See `tools/benchmark_device.md`. |
 | 4b | Muqriʾ reviewer | None yet. All rules stay `review_status: pending` and warning-only until approved. |
 | 5 | Android application id | `com.almathaba.tilawa` stays provisional. Final id to be decided before Phase 6 (first signed release). |

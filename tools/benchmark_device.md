@@ -3,11 +3,36 @@
 Goal: pick the V1 ASR backend and model size with measured data, against spec targets
 **live highlighting p95 ≤ 1 s** and **end-of-ayah checks p95 ≤ 2 s**.
 
-## Devices
-- **Reference mid-range device** (to be confirmed by product owner — `TODO`): e.g. a 2022–2024
-  Android with 4–6 GB RAM, arm64. All go/no-go decisions use this device.
-- One low-end device (3–4 GB RAM, Android 7/API 24 if available) to check the min-SDK floor.
-- Emulator numbers are NOT used for decisions (no representative NPU/CPU behaviour).
+## Devices: "all Android phones" (product-owner decision, 2026-11-08)
+The app must run on **every Android phone with Android 7.0+ (API 24)**, on the three ABIs the
+APK already ships (arm64-v8a, armeabi-v7a, x86_64). There is no single reference device.
+Decisions are made **per device tier**, and the app picks its tier at runtime.
+
+| Tier | Typical hardware | ASR model | Live mode |
+|---|---|---|---|
+| **Low** | ≤ 3 GB RAM, 32-bit (armeabi-v7a) or 4 × Cortex-A53, Android 7–9 | smallest candidate (tiny-class, int8) | Word follow per waqf segment (results after each pause) when live latency can't be met |
+| **Mid** | 4–6 GB RAM, arm64, A55/A7x-class cores | base-class int8 | Live word highlighting |
+| **High** | ≥ 8 GB RAM, recent arm64 | best candidate meeting the latency target | Live highlighting, end-of-ayah checks |
+
+Rules:
+- **The app never refuses to run.** If a phone can't meet the live target, it degrades to
+  checking per segment (after each pause) instead of live, and says so in Arabic. Checks are
+  never silently weakened.
+- The tier comes from total RAM and ABI, read through a platform channel (`ActivityManager`
+  memory info, `Build.SUPPORTED_ABIS`), plus a timed self-test of the first ASR window on first
+  launch. The result is cached. The user can override it in settings.
+- Native ASR libraries must be built for all three ABIs (`TODO-VERIFY` for each runtime
+  candidate: whisper.cpp builds for armeabi-v7a; ONNX Runtime Android AAR ABI list).
+- APK size: ship as an Android App Bundle (one ABI per device) and keep large models as
+  install-time asset packs per tier. Nothing is downloaded at runtime in V1 (still no INTERNET).
+
+Test devices:
+- **Real phones decide**, one per tier at minimum. The product owner's phone is one data
+  point; its model and RAM are still to be given.
+- Emulators (API 24, 28, 34; x86_64) cover functional, UI and RTL tests only. They are not
+  used for latency decisions.
+- A cloud device lab (e.g. Firebase Test Lab) would cover many real phones, but it is a paid
+  service. **Needs the product owner's approval before use.**
 
 ## Candidates (each `TODO-VERIFY` licence before benchmarking, see docs/DATA_SOURCES.md)
 | ID | Model | Runtime | Quantisation |
@@ -43,7 +68,7 @@ Timings are logged as numbers only; no audio leaves the device or is written to 
 during benchmarking on the app side (eval audio is fed from the test harness).
 
 ## Decision rule
-1. Discard any candidate failing p95 latency targets on the reference device.
+1. Per tier: discard any candidate that fails the p95 latency targets on that tier's real phone.
 2. Among the rest, maximise **word-error precision** (primary), then recall, then size.
 3. If no Whisper candidate gives usable word timestamps, madd/ghunnah use C-ctc alignment
    even if Whisper is kept for word recognition.
