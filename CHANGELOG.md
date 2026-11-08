@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased] — Phase 3 fix: speed and capture (2026-11-08)
+- Field report (S22 Ultra): too slow, recitation not captured easily.
+- Runtime ARM CPU variants (dotprod/fp16/i8mm/SVE), encoder window sized to the clip, greedy
+  live previews with beam only for the final pass, PCM16 straight to C, noise suppression off,
+  more sensitive VAD, microphone level meter, model install without reloading, engine preload,
+  profile build for device tests. Host: 670–890 ms → 130–290 ms per 4 s clip (synthetic audio).
+
 ## [Unreleased] — Phase 3: offline engine MVP (2026-11-08)
 ### Added
 - On-device ASR: whisper.cpp v1.9.5 (submodule) with a C API, built for 3 ABIs; Dart FFI in an
