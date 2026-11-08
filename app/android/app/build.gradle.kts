@@ -27,6 +27,23 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // On-device ASR (whisper.cpp) for every phone ABI the app ships (docs/ARCHITECTURE.md).
+        externalNativeBuild {
+            cmake {
+                arguments += listOf("-DANDROID_STL=c++_shared", "-DCMAKE_BUILD_TYPE=Release")
+            }
+        }
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("../../native/tilawa_asr/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     buildTypes {

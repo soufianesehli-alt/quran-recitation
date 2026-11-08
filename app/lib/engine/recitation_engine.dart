@@ -13,7 +13,8 @@ abstract class RecitationEngine {
 
   /// Starts listening for [ayah] and emits live events until the ayah completes or
   /// [stop] is called. The stream closes after [AyahCompleteEvent].
-  Stream<LiveEvent> start(AyahRef ayah);
+  /// [fromWordIndex] restarts inside the ayah (re-recitation from a waqf segment, §7).
+  Stream<LiveEvent> start(AyahRef ayah, {int fromWordIndex = 0});
 
   /// Stops listening and releases the microphone and all audio buffers.
   Future<void> stop();

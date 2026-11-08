@@ -19,7 +19,7 @@ class OnlineEngine implements RecitationEngine {
       throw UnimplementedError('OnlineEngine is V2');
 
   @override
-  Stream<LiveEvent> start(AyahRef ayah) =>
+  Stream<LiveEvent> start(AyahRef ayah, {int fromWordIndex = 0}) =>
       throw UnimplementedError('OnlineEngine is V2');
 
   @override

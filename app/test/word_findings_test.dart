@@ -34,6 +34,19 @@ void main() {
     },
   );
 
+  test(
+    'a near-miss substitution is never an error, even at high confidence',
+    () {
+      // 'ab' heard as 'ax': one letter of two differs => possibly the recogniser's mistake.
+      final f = const WordFindingBuilder(devTreatWordRulesAsBlocking: true)
+          .build(words, aligner.align(keys, h(['ax', 'cd', 'ef'], 0.99)));
+      expect(f.single.severity, Severity.needsReview);
+      expect(gate.canAdvance(f), isTrue);
+      expect(WordFindingBuilder.isNearMiss('abcd', 'abxd'), isTrue);
+      expect(WordFindingBuilder.isNearMiss('abcd', 'wxyz'), isFalse);
+    },
+  );
+
   test('low-confidence substitution is needsReview', () {
     final f = const WordFindingBuilder().build(
       words,

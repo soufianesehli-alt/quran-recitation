@@ -18,7 +18,7 @@ class VadEvent {
 /// Energy voice-activity detector with an adaptive noise floor (docs/SPEC.md §5 step 2).
 ///
 /// Deterministic and model-free, so it runs identically on every phone tier. Emits:
-/// - [VadEventType.speechStart] when speech begins;
+/// - [VadEventType.speechStart] when speech begins (again after every pause);
 /// - [VadEventType.pause] once silence lasts [pauseMs] (a waqf candidate);
 /// - [VadEventType.longPause] once silence lasts [longPauseMs] (end of the ayah attempt).
 class EnergyVad {
@@ -83,17 +83,19 @@ class EnergyVad {
       } else {
         _speechRunMs = 0;
         _noiseDb = 0.95 * _noiseDb + 0.05 * db;
-        if (_inSpeech) {
+        // Count silence while speaking, and after a short pause until the long pause fires.
+        if (_inSpeech || (_pauseSent && !_longPauseSent)) {
           _silenceRunMs += frameMs;
-          if (!_pauseSent && _silenceRunMs >= pauseMs) {
+          if (_inSpeech && _silenceRunMs >= pauseMs) {
+            _inSpeech =
+                false; // speech resuming after this starts a new segment
             _pauseSent = true;
             events.add(
               VadEvent(VadEventType.pause, now, pauseMs: _silenceRunMs),
             );
           }
-          if (!_longPauseSent && _silenceRunMs >= longPauseMs) {
+          if (_pauseSent && !_longPauseSent && _silenceRunMs >= longPauseMs) {
             _longPauseSent = true;
-            _inSpeech = false;
             events.add(
               VadEvent(VadEventType.longPause, now, pauseMs: _silenceRunMs),
             );

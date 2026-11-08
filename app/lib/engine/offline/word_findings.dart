@@ -82,14 +82,20 @@ class WordFindingBuilder {
             ),
           );
         case AlignStatus.substituted:
+          // Recogniser mistakes are typically near-misses (a letter or two) that still get
+          // high token probability, so only a clearly different word may be an error.
+          final near = isNearMiss(word.normalized, aw.hyp!.text);
           out.add(
             _finding(
               WordRules.substitution,
               word,
               confidence: aw.hyp!.confidence,
+              forceSeverity: near ? Severity.needsReview : null,
               observed: aw.hyp!.text,
               hyp: aw.hyp,
-              messageAr: 'قُرئت كلمة أخرى مكان «${word.uthmani}».',
+              messageAr: near
+                  ? 'قد تكون «${word.uthmani}» قُرئت بشكل غير دقيق. راجعها.'
+                  : 'قُرئت كلمة أخرى مكان «${word.uthmani}».',
             ),
           );
         case AlignStatus.omitted:
@@ -170,6 +176,11 @@ class WordFindingBuilder {
       ruleIsBlocking: rule.blocking || devTreatWordRulesAsBlocking,
     );
   }
+
+  /// True when [heard] differs from [expected] in at most half of the letters (normalised
+  /// edit distance <= 0.5): such a difference may be the recogniser's, not the reciter's.
+  static bool isNearMiss(String expected, String heard) =>
+      WordAligner.substitutionCost(expected, heard) <= 0.75;
 
   /// Confidence that a word was really skipped: the recogniser must be confident about the
   /// words around the gap; with no neighbours we stay uncertain.

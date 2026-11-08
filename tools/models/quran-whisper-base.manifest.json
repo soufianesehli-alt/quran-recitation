@@ -1,0 +1,30 @@
+{
+  "source": {
+    "repo": "tarteel-ai/whisper-base-ar-quran",
+    "revision": "5c3c53fdf9272c4f6ee0bee09a1e5a4a615ee25c",
+    "weights_sha256": "ec75894993a4570a237b2b1c19fd8a448f1e8f6e083cfab699574f7be53874fa",
+    "license": "apache-2.0",
+    "base_model": "openai/whisper-base"
+  },
+  "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+  "converted_on": "2026-11-08",
+  "conversion_config_fix": {
+    "max_length": [
+      1024,
+      448
+    ]
+  },
+  "f16_sha256": "aaebca10e2a65a6dda073a6b3ac59900f91887628acf872c565a0198ee850ead",
+  "outputs": {
+    "quran-whisper-base-q8_0.bin": {
+      "sha256": "72194195f7d280adebec57acf2c6e01e209484322ec1cec21c275a3c0b1e3d77",
+      "bytes": 81768585,
+      "quant": "q8_0"
+    },
+    "quran-whisper-base-q5_1.bin": {
+      "sha256": "acc1f03c8b1468b674b4fab50e0b2312cff982ba0001cd16fe36ca23862b6536",
+      "bytes": 59707625,
+      "quant": "q5_1"
+    }
+  }
+}

@@ -62,10 +62,13 @@ void main() {
       ];
       expect(events.map((e) => e.type), [
         VadEventType.speechStart,
+        VadEventType.pause, // short pause: a waqf candidate
+        VadEventType.speechStart, // speech resumes: new segment
         VadEventType.pause,
-        VadEventType.longPause,
+        VadEventType.longPause, // end of the attempt
       ]);
       expect(events[1].atMs, closeTo(300 + 800 + 500, 40));
+      expect(events[2].atMs, closeTo(300 + 800 + 600, 60));
     });
 
     test('background noise alone triggers nothing', () {
