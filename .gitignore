@@ -15,6 +15,8 @@ app/build/
 app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/android/.gradle/
+app/android/build/
+app/android/app/.cxx/
 app/android/local.properties
 app/android/app/release/
 *.iml
