@@ -31,6 +31,9 @@ Test devices:
   - **High tier: Samsung Galaxy S25 FE** (product owner's phone). Expected Exynos 2400 and 8 GB
     RAM; `TODO-VERIFY` on the device (Settings → About phone), and the app's tier probe will log
     it too.
+  - **High tier: Samsung Galaxy S22 Ultra** (first phone actually tested; 8 or 12 GB RAM,
+    Snapdragon 8 Gen 1 or Exynos 2200 depending on region, `TODO-VERIFY` via the diagnostics
+    screen).
   - **Mid and low tiers: no device yet.** Low-tier latency is the riskiest number, so a cheap
     used Android 7–9 phone with 2–3 GB RAM would be the most valuable addition.
 - Emulators (API 24, 28, 34; x86_64) cover functional, UI and RTL tests only. They are not
