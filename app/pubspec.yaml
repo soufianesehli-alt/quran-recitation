@@ -31,6 +31,9 @@ flutter:
     - assets/quran/hafs.sqlite
     - assets/quran/warsh.sqlite
     - assets/fonts/KFGQPC-Warsh-font-license.txt
+    - assets/licenses/
+    # ASR models from tools/convert_model.py (git-ignored, see assets/models/README.md).
+    - assets/models/
     - assets/fonts/AmiriQuran-OFL.txt
   fonts:
     # Fallback Hafs font (approved by the product owner). Replaced by the KFGQPC Hafs font if
