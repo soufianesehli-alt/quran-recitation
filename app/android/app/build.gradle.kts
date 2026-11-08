@@ -39,6 +39,14 @@ android {
         }
     }
 
+    // Extract native libraries to nativeLibraryDir: ggml scans that folder for the CPU
+    // variant matching the phone (docs/ARCHITECTURE.md §4.4).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path = file("../../native/tilawa_asr/CMakeLists.txt")

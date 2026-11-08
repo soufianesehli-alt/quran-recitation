@@ -15,6 +15,7 @@ class DeviceProbe {
       cpuCores: (m['cpuCores'] as int?) ?? 4,
       model: (m['model'] as String?) ?? 'unknown',
       sdkInt: (m['sdkInt'] as int?) ?? 0,
+      nativeLibDir: m['nativeLibDir'] as String?,
     );
   }
 }

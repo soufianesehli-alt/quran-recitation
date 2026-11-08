@@ -35,6 +35,13 @@ final class AyahCompleteEvent extends LiveEvent {
   final List<Finding> findings;
 }
 
+/// Microphone level, about every 100 ms, in [0, 1] (for the on-screen meter only).
+final class MicLevelEvent extends LiveEvent {
+  const MicLevelEvent(super.ayah, this.level, {required this.speaking});
+  final double level;
+  final bool speaking;
+}
+
 /// Recoverable engine problem (e.g. microphone lost). [messageAr] is user-facing.
 final class EngineErrorEvent extends LiveEvent {
   const EngineErrorEvent(super.ayah, this.messageAr);

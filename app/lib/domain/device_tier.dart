@@ -8,6 +8,7 @@ class DeviceInfo {
     required this.cpuCores,
     required this.model,
     required this.sdkInt,
+    this.nativeLibDir,
   });
 
   final int totalRamMb;
@@ -15,6 +16,9 @@ class DeviceInfo {
   final int cpuCores;
   final String model;
   final int sdkInt;
+
+  /// Android native library folder (where the ggml CPU variants live).
+  final String? nativeLibDir;
 
   DeviceTier get tier {
     if (primaryAbi == 'armeabi-v7a' || totalRamMb < 3500) return DeviceTier.low;

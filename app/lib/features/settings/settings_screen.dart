@@ -92,7 +92,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          if (kDebugMode) ...[
+          if (!kReleaseMode) ...[
             const Divider(),
             ListTile(
               title: Text(

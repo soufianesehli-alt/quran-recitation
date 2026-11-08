@@ -18,7 +18,7 @@ import 'word_findings.dart';
 /// Tunables of the offline pipeline. Defaults are starting points, tuned in Phase 5.
 class OfflineEngineConfig {
   const OfflineEngineConfig({
-    this.liveTickMs = 1500,
+    this.liveTickMs = 1000,
     this.maxSegmentMs = 25000,
     this.pauseMs = 500,
     this.longPauseMs = 1500,
@@ -164,7 +164,13 @@ class _Run {
   void _onAudio(Int16List chunk) {
     if (_done) return;
     buffer.write(chunk);
-    for (final ev in vad.process(chunk)) {
+    final events = vad.process(chunk);
+    if (!out.isClosed) {
+      // -60 dB (silence) .. 0 dB (full scale) mapped to 0..1 for the meter.
+      final level = ((vad.lastDb + 60) / 60).clamp(0.0, 1.0);
+      out.add(MicLevelEvent(ref, level, speaking: vad.inSpeech));
+    }
+    for (final ev in events) {
       switch (ev.type) {
         case VadEventType.speechStart:
           _segStart ??= (ev.atMs * OfflineEngine._sr ~/ 1000).clamp(
@@ -191,7 +197,7 @@ class _Run {
       _lastTick = buffer.totalWritten;
       final from = seg, to = buffer.totalWritten;
       _busy = true;
-      _recognise(from, to).then((partial) {
+      _recognise(from, to, fast: true).then((partial) {
         _busy = false;
         if (!_done) _updateLive([..._closed, ...partial], partial: true);
       });
@@ -214,14 +220,22 @@ class _Run {
   void _enqueue(Future<void> Function() job) =>
       _work = _work.then((_) => _done ? null : job());
 
-  Future<List<HypWord>> _recognise(int fromSample, int toSample) async {
+  /// [fast] = live preview (greedy); otherwise the accurate final pass of a closed segment.
+  Future<List<HypWord>> _recognise(
+    int fromSample,
+    int toSample, {
+    bool fast = false,
+  }) async {
     final sw = Stopwatch()..start();
     final audio = buffer.range(fromSample, toSample);
     final prompt = expected.map((w) => w.uthmani).join(' ');
     try {
-      final words = await e.asr.transcribe(audio, prompt: prompt);
+      final words = await e.asr.transcribe(audio, prompt: prompt, fast: fast);
       final offsetMs = fromSample * 1000 ~/ OfflineEngine._sr;
-      e.onMetric?.call('asr_ms', sw.elapsedMilliseconds);
+      e.onMetric?.call(
+        fast ? 'asr_live_ms' : 'asr_final_ms',
+        sw.elapsedMilliseconds,
+      );
       e.onMetric?.call(
         'asr_audio_ms',
         audio.length * 1000 ~/ OfflineEngine._sr,

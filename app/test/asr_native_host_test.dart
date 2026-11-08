@@ -28,19 +28,29 @@ void main() {
   }
 
   test('isolate backend loads the model and returns timed words', () async {
-    final asr = IsolateAsrBackend(libraryPath: lib);
+    final asr = IsolateAsrBackend(
+      libraryPath: lib,
+      backendDir: env['TILAWA_ASR_BACKENDS'],
+    );
     await asr.load(model!);
+    final audio = readWav(wav!);
+    final prompt = env['TILAWA_TEST_PROMPT'];
+
     final sw = Stopwatch()..start();
-    final words = await asr.transcribe(
-      readWav(wav!),
-      prompt: env['TILAWA_TEST_PROMPT'],
-    );
-    final ms = sw.elapsedMilliseconds;
+    final live = await asr.transcribe(audio, prompt: prompt, fast: true);
+    final liveMs = sw.elapsedMilliseconds;
+    sw.reset();
+    final words = await asr.transcribe(audio, prompt: prompt);
+    final finalMs = sw.elapsedMilliseconds;
+    final info = asr.systemInfo;
     await asr.dispose();
-    // ignore: avoid_print
-    print(
-      'ASR ${ms}ms: ${words.map((w) => '${w.text}(${w.confidence.toStringAsFixed(2)} ${w.startMs}-${w.endMs})').join(' ')}',
-    );
+
+    stdout
+      ..writeln('CPU ${info.length > 80 ? info.substring(0, 80) : info}')
+      ..writeln('LIVE ${liveMs}ms: ${live.map((w) => w.text).join(' ')}')
+      ..writeln(
+        'FINAL ${finalMs}ms: ${words.map((w) => '${w.text}(${w.confidence.toStringAsFixed(2)})').join(' ')}',
+      );
     expect(words, isNotEmpty);
     for (final w in words) {
       expect(w.confidence, inInclusiveRange(0, 1));

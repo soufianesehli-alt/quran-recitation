@@ -13,7 +13,7 @@ typedef _InitN = Pointer<Void> Function(Pointer<Utf8>);
 typedef _Init = Pointer<Void> Function(Pointer<Utf8>);
 typedef _TranscribeN = Int32 Function(
   Pointer<Void>,
-  Pointer<Float>,
+  Pointer<Int16>,
   Int32,
   Pointer<Utf8>,
   Int32,
@@ -22,7 +22,7 @@ typedef _TranscribeN = Int32 Function(
 );
 typedef _Transcribe = int Function(
   Pointer<Void>,
-  Pointer<Float>,
+  Pointer<Int16>,
   int,
   Pointer<Utf8>,
   int,
@@ -39,6 +39,9 @@ typedef _TokPN = Float Function(Pointer<Void>, Int32);
 typedef _TokP = double Function(Pointer<Void>, int);
 typedef _TokTN = Int64 Function(Pointer<Void>, Int32);
 typedef _TokT = int Function(Pointer<Void>, int);
+typedef _LoadBackendsN = Void Function(Pointer<Utf8>);
+typedef _LoadBackends = void Function(Pointer<Utf8>);
+typedef _InfoN = Pointer<Utf8> Function();
 typedef _FreeN = Void Function(Pointer<Void>);
 typedef _Free = void Function(Pointer<Void>);
 
@@ -55,6 +58,10 @@ class NativeWhisper {
       _tokP = lib.lookupFunction<_TokPN, _TokP>('tilawa_asr_token_p'),
       _tokT0 = lib.lookupFunction<_TokTN, _TokT>('tilawa_asr_token_t0_ms'),
       _tokT1 = lib.lookupFunction<_TokTN, _TokT>('tilawa_asr_token_t1_ms'),
+      _loadBackends = lib.lookupFunction<_LoadBackendsN, _LoadBackends>(
+        'tilawa_asr_load_backends',
+      ),
+      _info = lib.lookupFunction<_InfoN, _InfoN>('tilawa_asr_system_info'),
       _free = lib.lookupFunction<_FreeN, _Free>('tilawa_asr_free');
 
   /// Opens the library bundled in the APK (or [path] on a host machine for tests).
@@ -67,8 +74,24 @@ class NativeWhisper {
   final _TokP _tokP;
   final _TokT _tokT0;
   final _TokT _tokT1;
+  final _LoadBackends _loadBackends;
+  final Pointer<Utf8> Function() _info;
   final _Free _free;
   Pointer<Void> _h = nullptr;
+
+  /// Loads the CPU backend variants from [dir] (Android: the app's native library folder) so
+  /// the fastest one this CPU supports is used.
+  void loadBackends(String? dir) {
+    final p = dir == null ? nullptr : dir.toNativeUtf8();
+    try {
+      _loadBackends(p.cast());
+    } finally {
+      if (p != nullptr) calloc.free(p);
+    }
+  }
+
+  /// Active CPU features (diagnostics only).
+  String systemInfo() => _info().toDartString();
 
   bool load(String modelPath) {
     final p = modelPath.toNativeUtf8();
@@ -86,18 +109,15 @@ class NativeWhisper {
     Int16List samples, {
     String? prompt,
     int threads = 4,
-    int audioCtx = 0,
+    int audioCtx = -1,
     int beamSize = 5,
   }) {
     if (_h == nullptr) throw StateError('model not loaded');
-    final buf = calloc<Float>(samples.length);
+    final buf = calloc<Int16>(samples.length);
     final promptPtr = prompt == null ? nullptr : prompt.toNativeUtf8();
     final out = calloc<Pointer<Uint8>>();
     try {
-      final f = buf.asTypedList(samples.length);
-      for (var i = 0; i < samples.length; i++) {
-        f[i] = samples[i] / 32768.0;
-      }
+      final view = buf.asTypedList(samples.length)..setAll(0, samples);
       final n = _transcribe(
         _h,
         buf,
@@ -107,7 +127,11 @@ class NativeWhisper {
         audioCtx,
         beamSize,
       );
-      f.fillRange(0, f.length, 0); // do not leave audio in freed native memory
+      view.fillRange(
+        0,
+        view.length,
+        0,
+      ); // do not leave audio in freed native memory
       if (n < 0) throw StateError('transcription failed');
       final tokens = <AsrToken>[];
       for (var i = 0; i < n; i++) {
@@ -138,17 +162,23 @@ class NativeWhisper {
 class IsolateAsrBackend implements AsrBackend {
   IsolateAsrBackend({
     this.libraryPath,
+    this.backendDir,
     this.threads = 4,
-    this.audioCtx = 0,
     this.beamSize = 5,
   });
 
+  /// Host tests only; on Android the library is found by name.
   final String? libraryPath;
-  final int threads;
-  final int audioCtx;
 
-  /// 1 = greedy; >1 = beam search (default 5: far more robust with the prompt, ~1.6x slower).
+  /// Folder holding the ggml CPU variant libraries (Android: nativeLibraryDir).
+  final String? backendDir;
+  final int threads;
+
+  /// Beam size for the final pass of a segment (1 = greedy). Live previews are always greedy.
   final int beamSize;
+
+  /// Active CPU features after [load] (diagnostics only).
+  String systemInfo = '';
 
   Isolate? _isolate;
   SendPort? _send;
@@ -169,21 +199,26 @@ class IsolateAsrBackend implements AsrBackend {
     _isolate = await Isolate.spawn(_worker, [
       _replies.sendPort,
       libraryPath,
+      backendDir,
       threads,
-      audioCtx,
-      beamSize,
     ]);
     _send = await ready.future;
     final ok = await _call(['load', modelPath]);
-    if (ok != true) throw StateError('ASR model failed to load: $ok');
+    if (ok is! String) throw StateError('ASR model failed to load');
+    systemInfo = ok;
   }
 
   @override
-  Future<List<HypWord>> transcribe(Int16List samples, {String? prompt}) async {
+  Future<List<HypWord>> transcribe(
+    Int16List samples, {
+    String? prompt,
+    bool fast = false,
+  }) async {
     final res = await _call([
       'run',
       TransferableTypedData.fromList([samples]),
       prompt,
+      fast ? 1 : beamSize,
     ]);
     if (res is! List) throw StateError('ASR failed: $res');
     final tokens = [
@@ -220,16 +255,15 @@ class IsolateAsrBackend implements AsrBackend {
     final inbox = ReceivePort();
     reply.send(inbox.sendPort);
     final w = NativeWhisper.open(args[1] as String?);
-    final threads = args[2] as int;
-    final audioCtx = args[3] as int;
-    final beamSize = args[4] as int;
+    w.loadBackends(args[2] as String?);
+    final threads = args[3] as int;
     inbox.listen((raw) {
       final m = raw as List;
       final id = m[0] as int;
       try {
         switch (m[1]) {
           case 'load':
-            reply.send([id, w.load(m[2] as String)]);
+            reply.send([id, w.load(m[2] as String) ? w.systemInfo() : false]);
           case 'run':
             final samples = (m[2] as TransferableTypedData)
                 .materialize()
@@ -238,8 +272,7 @@ class IsolateAsrBackend implements AsrBackend {
               samples,
               prompt: m[3] as String?,
               threads: threads,
-              audioCtx: audioCtx,
-              beamSize: beamSize,
+              beamSize: m[4] as int,
             );
             samples.fillRange(0, samples.length, 0);
             reply.send([

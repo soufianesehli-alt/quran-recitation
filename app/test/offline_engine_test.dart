@@ -41,7 +41,11 @@ class FakeAsr implements AsrBackend {
   @override
   Future<void> dispose() async {}
   @override
-  Future<List<HypWord>> transcribe(Int16List s, {String? prompt}) async {
+  Future<List<HypWord>> transcribe(
+    Int16List s, {
+    String? prompt,
+    bool fast = false,
+  }) async {
     calls++;
     var peak = 0;
     for (final x in s) {

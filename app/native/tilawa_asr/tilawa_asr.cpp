@@ -3,6 +3,10 @@
 #include <string>
 #include <vector>
 
+#include <algorithm>
+#include <mutex>
+
+#include "ggml-backend.h"
 #include "whisper.h"
 
 namespace {
@@ -20,7 +24,22 @@ void quiet_log(enum ggml_log_level, const char *, void *) {}
 struct tilawa_asr {
     whisper_context * ctx = nullptr;
     std::vector<Token> tokens;
+    std::vector<float> pcm;  // float copy of the current clip, zeroed after each call
 };
+
+extern "C" void tilawa_asr_load_backends(const char * backend_dir) {
+    static std::once_flag once;
+    std::call_once(once, [backend_dir] {
+        whisper_log_set(quiet_log, nullptr);
+        if (backend_dir && *backend_dir) {
+            ggml_backend_load_all_from_path(backend_dir);
+        } else {
+            ggml_backend_load_all();
+        }
+    });
+}
+
+extern "C" const char * tilawa_asr_system_info(void) { return whisper_print_system_info(); }
 
 extern "C" tilawa_asr * tilawa_asr_init(const char * model_path) {
     whisper_log_set(quiet_log, nullptr);
@@ -33,11 +52,13 @@ extern "C" tilawa_asr * tilawa_asr_init(const char * model_path) {
     return h;
 }
 
-extern "C" int tilawa_asr_transcribe(tilawa_asr * h, const float * samples, int n_samples,
+extern "C" int tilawa_asr_transcribe(tilawa_asr * h, const int16_t * samples, int n_samples,
                                      const char * initial_prompt, int n_threads, int audio_ctx,
                                      int beam_size) {
     if (!h || !h->ctx || !samples || n_samples <= 0) return -1;
     h->tokens.clear();
+    h->pcm.resize(n_samples);
+    for (int i = 0; i < n_samples; ++i) h->pcm[i] = samples[i] / 32768.0f;
 
     const bool beam = beam_size > 1;
     whisper_full_params p = whisper_full_default_params(beam ? WHISPER_SAMPLING_BEAM_SEARCH
@@ -50,6 +71,11 @@ extern "C" int tilawa_asr_transcribe(tilawa_asr * h, const float * samples, int 
     p.no_context = true;        // each window is independent
     p.single_segment = true;    // short streaming windows
     p.token_timestamps = true;  // word timing for highlighting / madd windows
+    // Whisper's encoder works on 30 s (1500 frames of 20 ms). For a short clip, encoding only
+    // the frames that contain audio (plus a margin) is several times faster.
+    if (audio_ctx < 0) {
+        audio_ctx = std::min(1500, n_samples / 320 + 64);
+    }
     p.audio_ctx = audio_ctx;
     p.initial_prompt = initial_prompt;
     p.suppress_blank = true;
@@ -59,7 +85,9 @@ extern "C" int tilawa_asr_transcribe(tilawa_asr * h, const float * samples, int 
     p.print_timestamps = false;
     p.print_special = false;
 
-    if (whisper_full(h->ctx, p, samples, n_samples) != 0) return -1;
+    const int rc = whisper_full(h->ctx, p, h->pcm.data(), n_samples);
+    std::fill(h->pcm.begin(), h->pcm.end(), 0.0f);  // do not keep audio in memory
+    if (rc != 0) return -1;
 
     const whisper_token eot = whisper_token_eot(h->ctx);
     const int n_seg = whisper_full_n_segments(h->ctx);

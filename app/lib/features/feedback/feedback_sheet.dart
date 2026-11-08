@@ -69,7 +69,7 @@ class FeedbackSheet extends StatelessWidget {
               if (f.observed != null) _row(StringsAr.heard, f.observed!, null),
               const SizedBox(height: 6),
               Text(f.messageAr, style: t.bodyLarge),
-              if (kDebugMode)
+              if (!kReleaseMode)
                 Text(
                   'ثقة: ${(f.confidence * 100).toStringAsFixed(0)}٪ · ${f.ruleId}',
                   style: t.bodySmall,

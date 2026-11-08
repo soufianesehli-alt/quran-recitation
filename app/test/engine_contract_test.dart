@@ -58,8 +58,11 @@ class _NoAsr implements AsrBackend {
   @override
   Future<void> load(String modelPath) async {}
   @override
-  Future<List<HypWord>> transcribe(Int16List samples, {String? prompt}) async =>
-      [];
+  Future<List<HypWord>> transcribe(
+    Int16List samples, {
+    String? prompt,
+    bool fast = false,
+  }) async => [];
   @override
   Future<void> dispose() async {}
 }

@@ -25,10 +25,10 @@ class EnergyVad {
   EnergyVad({
     this.sampleRate = 16000,
     this.frameMs = 20,
-    this.speechMarginDb = 10,
+    this.speechMarginDb = 8,
     this.pauseMs = 500,
     this.longPauseMs = 1500,
-    this.minSpeechMs = 120,
+    this.minSpeechMs = 100,
   });
 
   final int sampleRate;
@@ -50,6 +50,9 @@ class EnergyVad {
 
   int get _frameSamples => sampleRate * frameMs ~/ 1000;
   bool get inSpeech => _inSpeech;
+
+  /// Level of the last frame in dB (for the on-screen microphone meter).
+  double lastDb = -90;
   double get noiseFloorDb => _noiseDb;
 
   /// Feeds samples, returns the events they trigger, in order.
@@ -62,6 +65,7 @@ class EnergyVad {
       _framesSeen++;
       final now = _framesSeen * frameMs;
       final db = _rmsDb(frame);
+      lastDb = db;
 
       // Calibrate the noise floor on the first 200 ms, then track it during silence only.
       if (!_floorReady) {

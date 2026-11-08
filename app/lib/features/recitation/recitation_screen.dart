@@ -208,12 +208,38 @@ class _Controls extends StatelessWidget {
                   Text(StringsAr.preparing),
                 ],
               ),
-              SessionPhase.listening => FilledButton.tonalIcon(
-                onPressed: controller.stop,
-                icon: const Icon(Icons.stop),
-                label: const Text(
-                  '${StringsAr.listening}  ·  ${StringsAr.stopListening}',
-                ),
+              SessionPhase.listening => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Microphone meter: shows the reciter that their voice is heard.
+                  Row(
+                    children: [
+                      Icon(
+                        s.speaking ? Icons.graphic_eq : Icons.mic_none,
+                        color: s.speaking ? Colors.green.shade700 : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          key: const ValueKey('mic-level'),
+                          value: s.micLevel,
+                          minHeight: 6,
+                          color: s.speaking
+                              ? Colors.green.shade700
+                              : cs.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton.tonalIcon(
+                    onPressed: controller.stop,
+                    icon: const Icon(Icons.stop),
+                    label: const Text(
+                      '${StringsAr.listening}  ·  ${StringsAr.stopListening}',
+                    ),
+                  ),
+                ],
               ),
               SessionPhase.ready || SessionPhase.error => FilledButton.icon(
                 onPressed: controller.start,

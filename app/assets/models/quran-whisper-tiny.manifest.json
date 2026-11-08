@@ -1,0 +1,25 @@
+{
+  "source": {
+    "repo": "tarteel-ai/whisper-tiny-ar-quran",
+    "revision": "c3d7e624af5c81bef25a10a2af3a5a84cb4dd0f0",
+    "weights_sha256": "f26c96202427524ec015bcf25bd932414df0474e538d765c16759f1095757688",
+    "license": "apache-2.0",
+    "base_model": "openai/whisper-tiny"
+  },
+  "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+  "converted_on": "2026-11-08",
+  "conversion_config_fix": null,
+  "f16_sha256": "be91323bd8cf79cf8b2c9093df43889857ee44922457c72483b9ee2f23747836",
+  "outputs": {
+    "quran-whisper-tiny-q8_0.bin": {
+      "sha256": "ef01ab441b004f9e6f1ea98d397b43452b3a45efab7c3928ab37af655dde8b52",
+      "bytes": 43537433,
+      "quant": "q8_0"
+    },
+    "quran-whisper-tiny-q5_1.bin": {
+      "sha256": "af8dfdd73c60b32e4e6d72e98e095e33fbeb04b9d39508580d051aa28202c646",
+      "bytes": 32152673,
+      "quant": "q5_1"
+    }
+  }
+}

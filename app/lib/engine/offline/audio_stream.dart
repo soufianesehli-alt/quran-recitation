@@ -32,7 +32,10 @@ class MicAudioSource implements AudioSource {
         numChannels: 1,
         autoGain: true,
         echoCancel: false,
-        noiseSuppress: true,
+        // Off on purpose: Android noise suppressors treat a steady sound as noise and can
+        // attenuate a sustained madd vowel, which the recogniser (and later the madd
+        // checker) must hear intact.
+        noiseSuppress: false,
       ),
     );
     return bytes.map(pcm16FromBytes);

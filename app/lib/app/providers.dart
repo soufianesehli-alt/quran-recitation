@@ -97,13 +97,18 @@ final engineProvider = FutureProvider.family<RecitationEngine, Riwaya>((
   final modelPath = await ModelRepository.install(setup.modelAsset);
   final engine = OfflineEngine(
     audio: MicAudioSource(),
-    asr: IsolateAsrBackend(threads: setup.threads, beamSize: setup.beamSize),
+    asr: IsolateAsrBackend(
+      threads: setup.threads,
+      beamSize: setup.beamSize,
+      backendDir: (await ref.read(deviceInfoProvider.future)).nativeLibDir,
+    ),
     modelPath: modelPath,
     openQuran: (r) => ref.read(quranRepoProvider(r).future),
     config: OfflineEngineConfig(
       liveHighlighting: setup.liveHighlighting,
       highConfidence: settings.highConfidence,
-      devTreatWordRulesAsBlocking: kDebugMode && settings.devBlockingWordRules,
+      devTreatWordRulesAsBlocking:
+          !kReleaseMode && settings.devBlockingWordRules,
     ),
     onMetric: metrics.add,
   );
@@ -140,6 +145,8 @@ class SessionState {
     this.offerContinue = false,
     this.fromWord = 0,
     this.messageAr,
+    this.micLevel = 0,
+    this.speaking = false,
   });
 
   final Riwaya riwaya;
@@ -160,6 +167,10 @@ class SessionState {
   final int fromWord;
   final String? messageAr;
 
+  /// Microphone level 0..1 and voice activity, for the on-screen meter.
+  final double micLevel;
+  final bool speaking;
+
   bool get hasNextAyah => ayahNumber < ayahCount;
 
   SessionState copyWith({
@@ -173,6 +184,8 @@ class SessionState {
     bool? offerContinue,
     int? fromWord,
     String? Function()? messageAr,
+    double? micLevel,
+    bool? speaking,
   }) => SessionState(
     riwaya: riwaya,
     surah: surah,
@@ -187,6 +200,8 @@ class SessionState {
     offerContinue: offerContinue ?? this.offerContinue,
     fromWord: fromWord ?? this.fromWord,
     messageAr: messageAr == null ? this.messageAr : messageAr(),
+    micLevel: micLevel ?? this.micLevel,
+    speaking: speaking ?? this.speaking,
   );
 }
 
@@ -274,6 +289,8 @@ class SessionController extends Notifier<SessionState> {
         break; // collected from AyahCompleteEvent (complete list for this attempt)
       case AyahCompleteEvent(:final findings):
         _evaluate(findings);
+      case MicLevelEvent(:final level, :final speaking):
+        state = state.copyWith(micLevel: level, speaking: speaking);
       case EngineErrorEvent(:final messageAr):
         state = state.copyWith(
           phase: SessionPhase.error,

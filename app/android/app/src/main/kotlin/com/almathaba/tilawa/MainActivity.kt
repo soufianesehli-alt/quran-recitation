@@ -23,6 +23,8 @@ class MainActivity : FlutterActivity() {
                             "cpuCores" to Runtime.getRuntime().availableProcessors(),
                             "model" to "${Build.MANUFACTURER} ${Build.MODEL}",
                             "sdkInt" to Build.VERSION.SDK_INT,
+                            // Where ggml finds its CPU variant libraries (dotprod, fp16, i8mm...).
+                            "nativeLibDir" to applicationInfo.nativeLibraryDir,
                         )
                     )
                 } else {

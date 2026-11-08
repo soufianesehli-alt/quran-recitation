@@ -52,31 +52,36 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
         ),
       );
       final info = await ref.read(deviceInfoProvider.future);
-      for (final (asset, beam) in [
-        (AsrSetup.baseModel, 5),
-        (AsrSetup.baseModel, 1),
-        (AsrSetup.tinyModel, 5),
-        (AsrSetup.tinyModel, 1),
-      ]) {
+      for (final asset in [AsrSetup.baseModel, AsrSetup.tinyModel]) {
         if (!await ModelRepository.isBundled(asset)) continue;
         final path = await ModelRepository.install(asset);
         final asr = IsolateAsrBackend(
           threads: info.cpuCores.clamp(2, 6),
-          beamSize: beam,
+          beamSize: 5,
+          backendDir: info.nativeLibDir,
         );
         final load = Stopwatch()..start();
         await asr.load(path);
         final loadMs = load.elapsedMilliseconds;
-        final run = Stopwatch()..start();
-        final words = await asr.transcribe(Int16List.fromList(audio));
-        final runMs = run.elapsedMilliseconds;
-        await asr.dispose();
         final name = asset.split('/').last.replaceAll('.bin', '');
-        setState(
-          () => _bench.add(
-            '$name beam=$beam: تحميل $loadMs ms · تعرّف $runMs ms · ${words.length} كلمة',
-          ),
-        );
+        if (asset == AsrSetup.baseModel) {
+          setState(() => _bench.add('CPU: ${asr.systemInfo}'));
+        }
+        for (final fast in [true, false]) {
+          final run = Stopwatch()..start();
+          final words = await asr.transcribe(
+            Int16List.fromList(audio),
+            fast: fast,
+          );
+          final runMs = run.elapsedMilliseconds;
+          setState(
+            () => _bench.add(
+              '$name ${fast ? "مباشر (greedy)" : "نهائي (beam 5)"}: '
+              'تحميل $loadMs ms · تعرّف $runMs ms · ${words.length} كلمة',
+            ),
+          );
+        }
+        await asr.dispose();
       }
       audio.fillRange(0, audio.length, 0);
     } catch (e) {

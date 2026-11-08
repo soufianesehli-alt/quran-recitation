@@ -160,6 +160,9 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
                   label: const Text(StringsAr.start),
                   onPressed: surahs.hasValue
                       ? () async {
+                          // Start loading the model now, so it is ready when the
+                          // reciter taps "listen".
+                          ref.read(engineProvider(riwaya).future).ignore();
                           await ref
                               .read(sessionProvider.notifier)
                               .open(riwaya, _surah, _ayah);
@@ -173,7 +176,7 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
                         }
                       : null,
                 ),
-                if (kDebugMode) ...[
+                if (!kReleaseMode) ...[
                   const SizedBox(height: 16),
                   const Text('نسخة تطوير', textAlign: TextAlign.center),
                 ],

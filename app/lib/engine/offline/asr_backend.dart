@@ -20,8 +20,13 @@ abstract class AsrBackend {
   Future<void> load(String modelPath);
 
   /// Transcribes 16 kHz mono PCM16 [samples], biased towards [prompt] (the expected text).
-  /// Returned word times are relative to the start of [samples].
-  Future<List<HypWord>> transcribe(Int16List samples, {String? prompt});
+  /// Returned word times are relative to the start of [samples]. [fast] = live preview
+  /// (greedy decoding); otherwise the most accurate setting (final pass of a segment).
+  Future<List<HypWord>> transcribe(
+    Int16List samples, {
+    String? prompt,
+    bool fast = false,
+  });
 
   Future<void> dispose();
 }
