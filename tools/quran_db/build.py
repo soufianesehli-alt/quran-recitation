@@ -13,6 +13,7 @@ import json
 import re
 import sqlite3
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 from .normalizer import ALLOWED, normalize
@@ -29,6 +30,10 @@ RUB_EL_HIZB = "۞"
 SAJDAH = "۩"
 FORMAT_CHARS = frozenset("​‌‍‎‏﻿")
 ARABIC_DIGITS = frozenset(chr(c) for c in range(0x0660, 0x066A))
+# KFGQPC v2.x encodes the ayah-end marker as ONE font-specific glyph: ayah n is drawn by the
+# code point U+FC00 + (n - 1) (Unicode "presentation form" slots reused by the KFGQPC font).
+KFGQPC_AYAH_MARK_BASE = 0xFC00
+KFGQPC_AYAH_MARK_LAST = 0xFDFF
 _TOKEN = re.compile(r"[^\s ]+")
 
 
@@ -136,9 +141,19 @@ def load_tanzil(text_path: Path, metadata_path: Path) -> Source:
 def load_kfgqpc_json(json_path: Path, license_text: str, version: str) -> Source:
     """KFGQPC Uthmanic data JSON (list of {sura_no, aya_no, aya_text, sura_name_ar, ...}).
 
+    `json_path` may be the JSON file itself or the official KFGQPC zip, read without unpacking
+    (the single `*.json` under its data folder). The recorded sha256 is that of the given file.
     The text uses the KFGQPC font encoding and must be displayed with the matching KFGQPC font.
     """
-    rows = json.loads(json_path.read_text(encoding="utf-8-sig"))
+    if json_path.suffix.lower() == ".zip":
+        with zipfile.ZipFile(json_path) as z:
+            members = [n for n in z.namelist() if n.lower().endswith(".json") and " data/" in n]
+            if len(members) != 1:
+                raise IntegrityError(f"expected one data JSON in {json_path.name}, got {members}")
+            raw = z.read(members[0]).decode("utf-8-sig")
+    else:
+        raw = json_path.read_text(encoding="utf-8-sig")
+    rows = json.loads(raw)
     ayahs = [SourceAyah(int(r["sura_no"]), int(r["aya_no"]), r["aya_text"]) for r in rows]
     names = {}
     for r in rows:
@@ -167,9 +182,18 @@ def _is_word(tok: str) -> bool:
     return any(normalize(ch) for ch in tok)
 
 
-def _is_ayah_number(tok: str) -> bool:
+def ayah_number_value(tok: str) -> int | None:
+    """Value of an ayah-number token (Arabic-Indic digits or a KFGQPC ayah-mark glyph)."""
     core = "".join(ch for ch in tok if ch not in FORMAT_CHARS)
-    return bool(core) and all(ch in ARABIC_DIGITS for ch in core)
+    if core and all(ch in ARABIC_DIGITS for ch in core):
+        return int("".join(str(ord(ch) - 0x0660) for ch in core))
+    if len(core) == 1 and KFGQPC_AYAH_MARK_BASE <= ord(core) <= KFGQPC_AYAH_MARK_LAST:
+        return ord(core) - KFGQPC_AYAH_MARK_BASE + 1
+    return None
+
+
+def _is_ayah_number(tok: str) -> bool:
+    return ayah_number_value(tok) is not None
 
 
 def tokenize(text: str) -> tuple[list[Word], list[tuple[int, int, str]]]:
@@ -198,7 +222,7 @@ def tokenize(text: str) -> tuple[list[Word], list[tuple[int, int, str]]]:
             )
             pending_prefix = None
         elif _is_ayah_number(tok):
-            ignored.append((start, end, "ayah_number"))
+            ignored.append((start, end, f"ayah_number:{ayah_number_value(tok)}"))
         else:
             core = "".join(ch for ch in tok if ch not in FORMAT_CHARS)
             if core == RUB_EL_HIZB:
@@ -283,7 +307,9 @@ def verify(src: Source, built: list[BuiltAyah]) -> dict[str, int]:
             for i in range(w.start, w.end):
                 covered[i] = True
             last_end = w.end
-        for s0, e0, _ in tokenize(a.text)[1]:
+        for s0, e0, kind in tokenize(a.text)[1]:
+            if kind.startswith("ayah_number:") and int(kind.split(":")[1]) != a.ayah:
+                raise IntegrityError(f"{a.surah}:{a.ayah}: ayah marker says {kind.split(':')[1]}")
             for i in range(s0, e0):
                 covered[i] = True
         leftover = {a.text[i] for i, c in enumerate(covered) if not c}

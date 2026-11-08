@@ -109,29 +109,27 @@ No external dataset. Rules are written in `assets/rules/{hafs,warsh}.yaml` from 
 3. Inside a word, `ۜ` is the sīn-over-ṣād spelling sign (2:245 `وَيَبْصُۜطُ`, 7:69 `بَصْۜطَةً`).
    It is not read as a pause sign.
 
-### 6.2 Warsh: pipeline ready, DB **not** built ⛔
-- The KFGQPC servers still reject this cloud: TLS "unrecognized name" on `fonts.*` and no
-  response from `qurancomplex.gov.sa`. The decision stands: the Warsh text must come from the
-  official download.
-- I validated the parser on the **unofficial** mirror `ibnhazm/KFGQPC` (Warsh data v10,
-  2021-08-05), in a scratch build only. Nothing from the mirror is committed. Results: 114
-  surahs, **6214 ayahs**, 1:1 = `اِ۬لْحَمْدُ` (the basmala is not counted), Al-Fātiḥa has 7
-  ayahs with 1:6 ending at `عَلَيْهِمْ`, Al-Baqarah has 285.
-- Format facts the build handles:
-  - The text uses the **KFGQPC font encoding**, so it must be shown with the KFGQPC Warsh font.
-  - Each `aya_text` ends with a non-breaking space and the ayah number.
-  - Pause signs are attached to the word (U+06D6 is used for all of them).
-  - `ے` (U+06D2) is the dotless yāʾ, e.g. `فِے`.
-- KFGQPC publishes **no separate per-surah ayah counts**, so the build can only check
-  contiguity and the total. **`TODO-VERIFY`**: an independent per-surah Madani count is needed
-  to cross-check (from the printed Warsh mushaf or a KFGQPC document).
+### 6.2 Warsh: built ✅ (official KFGQPC package)
+`app/assets/quran/warsh.sqlite` is built straight from the **official, unopened**
+`UthmanicWarsh_v2-1.zip`. Provenance, checksums and authenticity evidence are in
+`tools/sources/kfgqpc/SOURCE.md`.
 
-To build Warsh: download the official KFGQPC Warsh Uthmanic data (JSON) and font, then run
-```
-python3 tools/build_quran_db.py warsh --text <warshData_vN.json> --version N --license "<official terms>" --out app/assets/quran/warsh.sqlite
-WARSH_JSON=<warshData_vN.json> python3 -m pytest tools/tests
-```
-Then add the DB to `pubspec.yaml`.
+- The zip's MD5 and SHA-1 equal the values KFGQPC publishes on its developer page.
+- The Word document inside is digitally signed by KFGQPC.
+- The normalized text of all 114 surahs in the JSON appears, in order, inside that signed
+  document.
+
+Build results:
+- 114 surahs, **6214 ayahs (Madani)**, 77,425 words.
+- 1:1 = `اِ۬لْحَمْدُ` (the basmala is not counted), 1:6 ends at `عَلَيْهِمْ`, Al-Baqarah has 285.
+- **Every ayah-end marker matches its ayah number.** In v2.1 the marker is one font-specific
+  glyph, U+FC00 + (n − 1), and the build decodes and checks it.
+- KFGQPC publishes no separate per-surah counts. The per-surah Madani count is therefore
+  checked only for contiguity, the total and the end markers. **`TODO-VERIFY`** against an
+  independent reference (the printed Warsh mushaf) during muqriʾ review.
+- Terms: none are published for the data. Under the product owner's decision, nothing goes to
+  a public release before KFGQPC's written permission.
+- The unofficial `ibnhazm/KFGQPC` v10 mirror is no longer used.
 
 ### 6.3 Fonts
 **Hafs: Amiri Quran ✅** (fallback approved by the product owner on 2026-11-08)
@@ -147,8 +145,15 @@ Then add the DB to `pubspec.yaml`.
   alef, pause signs, the sakta sign and the sin-over-sad sign all placed correctly.
 - Will be replaced by the KFGQPC Hafs font if its terms allow.
 
-**Warsh: pending ⛔.** There is no fallback, by design (`QuranFonts.familyFor(warsh) == null`).
-Text in the KFGQPC encoding needs the KFGQPC Warsh font.
+**Warsh: official KFGQPC Uthmanic Warsh font v2.1 ✅** (`uthmanic_warsh_v21.ttf`, 871,636
+bytes, unmodified, taken from the verified zip).
+- Glyph coverage: all 351 distinct characters of the Warsh text, ayah-end glyphs included.
+- A visual check shows correct marks and correctly numbered ayah markers.
+- Its embedded terms are copied verbatim to `app/assets/fonts/KFGQPC-Warsh-font-license.txt`
+  and registered in the app. They are a copyright notice requiring written approval for
+  reproduction, plus a EULA granting free Use, Copy, Distribute (no sale or modification).
+  The two conflict, so the release stays gated on KFGQPC's written permission.
+- No other font may render Warsh text (`QuranFonts.familyFor`).
 
 Earlier notes:
 - The **Warsh text cannot render correctly without the KFGQPC Warsh font**, because of its

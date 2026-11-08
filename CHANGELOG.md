@@ -14,9 +14,13 @@
   integrity plus normalizer parity over all 77,433 words.
 - Amiri Quran font (OFL 1.1) as the approved Hafs fallback, with its license registered in the
   app. `QuranFonts.familyFor` gives no fallback for Warsh.
-### Not done
-- Warsh DB and Warsh font: waiting for the official KFGQPC download (servers unreachable from
-  the cloud).
+- Warsh DB from the official KFGQPC `UthmanicWarsh_v2-1.zip` (checksums equal the published
+  ones; Word document signed by KFGQPC; 6214 ayahs; ayah-end glyphs decoded and checked), plus
+  the official KFGQPC Warsh font v2.1 with its embedded license.
+- Build reads the KFGQPC zip directly. Python tests now cover Warsh (17 total); Dart adds Warsh
+  integrity, numbering-difference and normalizer-parity tests (31 total).
+### Open
+- KFGQPC written permission (release gate). Independent per-surah Madani count check.
 
 ## [Unreleased] — Phase 1: audit + architecture (2026-11-08)
 ### Added

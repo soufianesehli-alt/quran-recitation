@@ -23,9 +23,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    # Quran DBs built by tools/build_quran_db.py (warsh.sqlite added once the official
-    # KFGQPC files are available, see docs/DATA_SOURCES.md).
+    # Quran DBs built by tools/build_quran_db.py (sources: docs/DATA_SOURCES.md).
     - assets/quran/hafs.sqlite
+    - assets/quran/warsh.sqlite
+    - assets/fonts/KFGQPC-Warsh-font-license.txt
     - assets/fonts/AmiriQuran-OFL.txt
   fonts:
     # Fallback Hafs font (approved by the product owner). Replaced by the KFGQPC Hafs font if
@@ -33,3 +34,7 @@ flutter:
     - family: AmiriQuran
       fonts:
         - asset: assets/fonts/AmiriQuran-Regular.ttf
+    # Official KFGQPC Warsh font v2.1, unmodified. Required: the Warsh text uses its encoding.
+    - family: KfgqpcWarsh
+      fonts:
+        - asset: assets/fonts/uthmanic_warsh_v21.ttf

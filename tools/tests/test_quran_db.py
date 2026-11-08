@@ -2,7 +2,6 @@
 
 import dataclasses
 import json
-import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -130,7 +129,16 @@ def test_kfgqpc_ayah_number_is_not_a_word():
     words, ignored = tokenize("مَلِكِ يَوْمِ اِ۬لدِّينِۖ ٣")
     assert [w.normalized for w in words] == ["ملك", "يوم", "الدين"]
     assert words[-1].waqf_mark == "ۖ"
-    assert ignored and ignored[0][2] == "ayah_number"
+    assert ignored and ignored[0][2] == "ayah_number:3"
+
+
+def test_kfgqpc_v2_ayah_mark_glyph_is_decoded():
+    # KFGQPC v2.1 ends each ayah with one glyph code point U+FC00 + (n - 1).
+    from quran_db.build import ayah_number_value
+
+    assert ayah_number_value("\ufc00") == 1
+    assert ayah_number_value("\ufd1c") == 285
+    assert ayah_number_value("\u0661\u0660") == 10
 
 
 def test_missing_ayah_fails_the_build(hafs):
@@ -155,12 +163,52 @@ def test_committed_db_matches_a_fresh_build(hafs, tmp_path):
         assert fresh.execute(sql).fetchall() == committed.execute(sql).fetchall(), sql
 
 
-@pytest.mark.skipif("WARSH_JSON" not in os.environ, reason="set WARSH_JSON=path/to/warshData_vN.json")
-def test_warsh_source():
-    src = load_kfgqpc_json(Path(os.environ["WARSH_JSON"]), "test", "test")
-    built = build_ayahs(src)
-    stats = verify(src, built)
-    assert stats["surahs"] == 114
+KFGQPC_ZIP = TOOLS / "sources/kfgqpc/UthmanicWarsh_v2-1.zip"
+WARSH_DB = ROOT / "app/assets/quran/warsh.sqlite"
+
+
+@pytest.fixture(scope="module")
+def warsh():
+    src = load_kfgqpc_json(KFGQPC_ZIP, "test", "test")
+    return src, build_ayahs(src)
+
+
+def test_kfgqpc_zip_matches_checksums_published_by_kfgqpc():
+    import hashlib
+
+    data = KFGQPC_ZIP.read_bytes()
+    # Published on https://qurancomplex.gov.sa/quran-dev/ (see tools/sources/kfgqpc/SOURCE.md).
+    assert hashlib.md5(data).hexdigest() == "4701e8bbf053098220cf2cf4cda206a1"
+    assert hashlib.sha1(data).hexdigest() == "44ecea8feb23817fdc01a8ee2162a6a0cf08cae7"
+
+
+def test_warsh_integrity_and_madani_numbering(warsh):
+    src, built = warsh
+    stats = verify(src, built)  # also checks every ayah-end glyph against the ayah number
+    assert stats["surahs"] == 114 and stats["ayahs"] == 6214
     fatiha = [a for a in built if a.surah == 1]
     assert len(fatiha) == 7
     assert fatiha[0].words[0].normalized == "الحمد"  # basmala is not ayah 1 in Warsh
+    assert fatiha[5].words[-1].normalized == "عليهم"  # Madani: 1:6 ends at عليهم
+    assert sum(1 for a in built if a.surah == 2) == 285
+
+
+def test_hafs_and_warsh_differ_where_expected(hafs, warsh):
+    h = {(a.surah, a.ayah): a for a in hafs[1]}
+    w = {(a.surah, a.ayah): a for a in warsh[1]}
+    assert [x.normalized for x in h[(1, 4)].words][0] == "ملك"  # Hafs 1:4
+    assert [x.normalized for x in w[(1, 3)].words][0] == "ملك"  # Warsh 1:3
+    assert h[(1, 4)].words[0].uthmani != w[(1, 3)].words[0].uthmani
+
+
+def test_committed_warsh_db_matches_a_fresh_build(warsh, tmp_path):
+    src, built = warsh
+    out = tmp_path / "warsh.sqlite"
+    write_db(src, built, verify(src, built), out)
+    fresh, committed = sqlite3.connect(out), sqlite3.connect(WARSH_DB)
+    for sql in [
+        "SELECT * FROM surahs ORDER BY surah",
+        "SELECT * FROM ayahs ORDER BY surah, ayah",
+        "SELECT * FROM words ORDER BY surah, ayah, word_index",
+    ]:
+        assert fresh.execute(sql).fetchall() == committed.execute(sql).fetchall(), sql

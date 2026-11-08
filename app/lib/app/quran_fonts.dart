@@ -5,13 +5,13 @@ abstract final class QuranFonts {
   /// Amiri Quran (SIL OFL 1.1): approved fallback for the Tanzil Hafs text.
   static const amiriQuran = 'AmiriQuran';
 
-  /// Returns the font family for [riwaya], or null when no font is bundled yet.
-  ///
-  /// Warsh text is in the KFGQPC font encoding and must only be shown with the KFGQPC Warsh
-  /// font. Rendering it with any other font can misplace or drop marks, so there is no
-  /// fallback for Warsh.
-  static String? familyFor(Riwaya riwaya) => switch (riwaya) {
+  /// Official KFGQPC Uthmanic Warsh font v2.1. The KFGQPC Warsh text is encoded for this font
+  /// (e.g. ayah-end markers are font-specific glyphs), so no other font may display it.
+  static const kfgqpcWarsh = 'KfgqpcWarsh';
+
+  /// Font family for [riwaya]. Warsh never falls back to another font.
+  static String familyFor(Riwaya riwaya) => switch (riwaya) {
     Riwaya.hafs => amiriQuran,
-    Riwaya.warsh => null,
+    Riwaya.warsh => kfgqpcWarsh,
   };
 }
