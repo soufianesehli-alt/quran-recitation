@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased] — Phase 3: offline engine MVP (2026-11-08)
+### Added
+- On-device ASR: whisper.cpp v1.9.5 (submodule) with a C API, built for 3 ABIs; Dart FFI in an
+  isolate; models from `tools/convert_model.py` (tarteel-ai Quran Whisper base and tiny,
+  Apache-2.0, pinned and hashed).
+- Audio: `record` PCM stream (no file), in-memory ring buffer zeroed after use, energy VAD.
+- Word aligner, findings policy (conservative), skipped-ayah detection, live word events.
+- Session controller with ayah gating, segment re-recitation, "continue anyway", progress.
+- Screens: first launch, selection, recitation (live colours), feedback sheet, settings,
+  sources and licences, dev diagnostics and speed test.
+- Device tiers (low, mid, high) choosing the recogniser setup.
+- Tests: 72 Dart (unit, engine with fake mic and ASR, session, widget, privacy lint, manifest)
+  plus an opt-in native end-to-end test; 17 Python.
+### Known limits
+- No accuracy figures: no real recitation audio has been evaluated (Phase 5).
+- No word rule blocks yet (precision gate). Word timestamps are not usable for madd yet.
+- Warsh: text, font and rules are in place, but the acoustic model is assumed Hafs-only.
+
 ## [Unreleased] — Phase 2: data (2026-11-08)
 ### Added
 - `tools/build_quran_db.py` + `tools/quran_db/`: per-riwaya SQLite builder (Tanzil txt and KFGQPC

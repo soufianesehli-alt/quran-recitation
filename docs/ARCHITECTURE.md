@@ -157,6 +157,49 @@ Everything riwaya-specific is selected by `Riwaya`:
 
 The acoustic model is shared.
 
+## 4.4 Phase 3 implementation notes and evidence
+
+- **ASR runtime:** whisper.cpp v1.9.5, a pinned submodule (`app/native/whisper.cpp`) with a
+  thin C API (`app/native/tilawa_asr`). Gradle builds it for arm64-v8a, armeabi-v7a and x86_64,
+  with no GPU and no network code. Dart FFI runs it in a background isolate. whisper.cpp
+  logging is silenced.
+- **Models:** `tools/convert_model.py` produces q8_0 and q5_1 from the pinned HF revisions and
+  checks the weights' sha256. Every output hash goes in `tools/models/*.manifest.json`. The
+  binaries are git-ignored. Conversion bug found and fixed: the base fine-tune's
+  `config.max_length` (1024, a generation setting) was being read as the decoder context;
+  the weights have 448. Only the conversion config is corrected, never the weights.
+- **Smoke tests on this server** used synthetic espeak-ng speech generated from DB text. These
+  are not quality measurements; real recitation is needed (Phase 5).
+  - base q8_0 with beam 5 takes about 1.0–1.2 s for about 4 s of audio on 4 x86 cores.
+  - Biasing with the Uthmani text helps a lot. Example: 1:5 goes from garbled to almost
+    correct.
+  - Greedy decoding with the prompt can return nothing (tiny), so beam 5 is the default on
+    mid and high tiers.
+  - Token timestamps from `token_timestamps` are unusable (all words share one end time).
+    Madd and ghunnah timing (Phase 4) will need DTW timestamps or CTC alignment.
+  - **Token probability is not a reliable confidence.** Misheard words came out at 0.93–0.94.
+    Policy added: a substitution that differs in ≤ 50% of letters (*near miss*) is always
+    needsReview, never an error. Thresholds are still unvalidated (Phase 5).
+- **Engine:** the ring buffer feeds an energy VAD (a new segment after every pause). Each
+  segment is recognised with the expected ayah text as a prompt. Live ticks re-recognise only
+  the current segment, timed by audio time, so behaviour is deterministic. At the long pause,
+  or once every word is heard, the full alignment produces findings. A skipped ayah is
+  detected against the next ayah.
+- **Severity policy (code: `word_findings.dart`):**
+  - correct / variant (long vowels or hamza only) → needsReview;
+  - near-miss substitution → needsReview;
+  - far substitution or omission → error if confidence ≥ 0.9, else needsReview;
+  - addition → as substitution;
+  - repetition → info.
+  - **No word rule is blocking** until Phase 5 measures precision ≥ 90%. A debug-only switch
+    makes them blocking so gating can be tried.
+- **Session:** gate → passed (progress saved) or failed (retry from the waqf segment of the
+  first blocking finding, or from the ayah start, per settings). "Continue anyway" is offered
+  after N failures on the same word.
+- **Device tiers:** RAM, ABI and cores come from MainActivity. Low tier uses base with greedy
+  decoding and per-segment results; mid and high use base with beam 5, live. The user can
+  override live mode, and the model in dev builds.
+
 ## 8. Product-owner decisions (2026-11-08)
 
 | # | Question | Decision |

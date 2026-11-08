@@ -60,11 +60,11 @@ needs a font that supports its marks.
 
 | Item | What we know | Status |
 |---|---|---|
-| `tarteel-ai/whisper-base-ar-quran` | Search results quoting its Hugging Face card: `license: apache-2.0`. A fine-tune of Whisper base. Reported WER about 5.75% on its own eval set. **Training data, intended use and limitations are "More information needed"** on the card. | `TODO-VERIFY` (card not fetched directly). Unknown whether Warsh audio is in the training data; assume Hafs only. |
-| `tarteel-ai/whisper-tiny-ar-quran` | Listed by a third-party model index. | `TODO-VERIFY` that it exists and its license |
-| OpenAI Whisper base weights | Believed MIT. | `TODO-VERIFY` (needed because the fine-tune inherits from it) |
-| whisper.cpp (runtime) | Believed MIT. | `TODO-VERIFY` |
-| ONNX Runtime Mobile (runtime) | Believed MIT. | `TODO-VERIFY` |
+| `tarteel-ai/whisper-base-ar-quran` | **Apache-2.0**, read from the Hugging Face API and model card on 2026-11-08. Revision `5c3c53fd…`. Fine-tune of `openai/whisper-base` (Apache-2.0 on its HF card). Reported WER 5.75% on its own eval set. Training data: "None dataset" on the card. | ✅ licence. Training data unknown, so assume **Hafs only**: Warsh acoustic results stay needsReview. |
+| `tarteel-ai/whisper-tiny-ar-quran` | **Apache-2.0**, revision `c3d7e624…`, from `openai/whisper-tiny`, reported WER 7.05%. | ✅ licence. Unreliable in tests (empty output with the prompt). Dev option only. |
+| OpenAI Whisper base weights | `openai/whisper-base` HF card: Apache-2.0. | ✅ |
+| whisper.cpp (runtime) | MIT (LICENSE file of the pinned v1.9.5 submodule; text bundled in the app). | ✅ |
+| ONNX Runtime Mobile (runtime) | Not used in Phase 3 (whisper.cpp chosen). | n/a |
 | Small Arabic CTC model (wav2vec2-type) | **No specific model named yet.** Candidates are searched for in Phase 3. | `TODO-VERIFY` |
 | Training bases (§9): w2v-BERT 2.0, MMS, Whisper-large-v3 | Licenses not checked. Some MMS checkpoints may carry a **non-commercial** license; must check before relying on it. | `TODO-VERIFY` (V2/V3) |
 
