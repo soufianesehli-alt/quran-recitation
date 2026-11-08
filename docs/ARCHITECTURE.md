@@ -142,9 +142,14 @@ Everything riwaya-specific is selected by `Riwaya`:
 
 The acoustic model is shared.
 
-## 8. Open questions (for the product owner)
+## 8. Product-owner decisions (2026-11-08)
 
-1. Where is the existing Flutter frontend?
-2. Can Phase 3 use a reference test device (model, RAM) for the benchmark?
-3. Who is the muqriʾ reviewer for Phase 4?
-4. Is `com.almathaba.tilawa` acceptable as the Android application id?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Existing Flutter frontend? | None exists. Build fresh in `app/`. |
+| 2 | Committed `.env`, `venv/`, `__pycache__/` | Untracked (commit 4650266). The owner rotates the Anthropic key and sets `ANTHROPIC_API_KEY` in Render **before merging**. |
+| 3a | Access to official text and fonts | Personal cloud environment "quran-recitation" allows tanzil.net and the qurancomplex.gov.sa hosts. Tanzil works. The KFGQPC servers reject this cloud (fallback: owner downloads the files). |
+| 3b | KFGQPC terms | Build now. The owner requests written permission in parallel. No Play Store release until the terms are clear. |
+| 4a | Reference benchmark device | The owner's own phone. Model and RAM still to be given before Phase 3. |
+| 4b | Muqriʾ reviewer | None yet. All rules stay `review_status: pending` and warning-only until approved. |
+| 5 | Android application id | `com.almathaba.tilawa` stays provisional. Final id to be decided before Phase 6 (first signed release). |

@@ -17,7 +17,7 @@ Date: 2026-11-08 · Repo: `soufianesehli-alt/quran-recitation` (branch `main`, H
 
 **There is no Flutter frontend in this repository.** The spec says one exists. The only other
 repository visible to this session is `soufianesehli-alt/AVISMEN-wallet`, which by its name looks
-unrelated, so I did not open it. → **Question for the product owner: where is the Flutter code?**
+unrelated, so I did not open it. → **Decided: no frontend exists. The app is built fresh in `app/`.**
 
 ### Backend endpoints
 
@@ -51,9 +51,8 @@ unrelated, so I did not open it. → **Question for the product owner: where is 
   one**, then set it only as a Render environment variable.
 - The cause is that `.gitignore` is saved as UTF-16 (with BOM), which git cannot parse, so
   `.env`, `venv/` and `__pycache__/` were all committed.
-- In Phase 1 I **rewrote `.gitignore` as UTF-8** (a non-destructive change). Proposed follow-up,
-  **waiting for approval** because it deletes files from the repo:
-  `git rm -r --cached venv __pycache__ .env`. Removing them from the tip does not remove them from
+- In Phase 1 I **rewrote `.gitignore` as UTF-8** and, with approval, untracked
+  `venv/ __pycache__/ .env` (`git rm -r --cached`). Removing them from the tip does not remove them from
   history; rotating the key is the real fix.
 - `.python-version` is also UTF-16. Render may be ignoring it. Left untouched, because changing it
   could change the Python version of the live deployment.

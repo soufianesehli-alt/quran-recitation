@@ -13,5 +13,8 @@
 - Tests: gating policy, riwaya model, engine contract, manifest permissions, RTL widget test.
 ### Changed
 - `.gitignore` rewritten in UTF-8 (the previous UTF-16 file was ignored by git).
+- Stopped tracking `.env`, `venv/`, `__pycache__/` (approved by the product owner). The files are still on disk.
+- `docs/DATA_SOURCES.md`: Tanzil license verified from the primary page and quoted verbatim.
+- `docs/ARCHITECTURE.md` §8: product-owner decisions recorded.
 ### Not changed
-- Backend (`main.py`, `/check`) untouched. Committed `.env` / `venv/` not removed (awaiting approval).
+- Backend (`main.py`, `/check`) untouched.

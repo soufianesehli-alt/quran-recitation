@@ -1,6 +1,6 @@
 # Data sources and licenses: Phase 1 check
 
-**Status: no license below is confirmed.** From this sandbox the primary sites (`tanzil.net`,
+**Status: Tanzil confirmed (§1.1). Everything else is still unconfirmed.** From this sandbox the primary sites (`tanzil.net`,
 `qurancomplex.gov.sa`, `huggingface.co`) were unreachable because of the network policy. What
 follows comes from web search snippets and GitHub mirrors. Every item stays **`TODO-VERIFY`**
 until someone reads the primary terms and records them here, with the date and the exact quote.
@@ -12,11 +12,26 @@ app until its row below is ✅.
 
 | # | Source | Riwaya | What we know | Status |
 |---|---|---|---|---|
-| T1 | **Tanzil** Uthmani text (tanzil.net) | Hafs | Third-party copies of the Tanzil notice (an npm README, a thesis) say: **CC BY 3.0**, verbatim copying allowed, **no change to the text**, and apps must credit Tanzil and link to tanzil.net. Tanzil describes its Uthmani text as an encoding of the Madina mushaf. | `TODO-VERIFY` primary page `tanzil.net/docs/text_license` |
+| T1 | **Tanzil** Uthmani text (tanzil.net) | Hafs | **Read from `tanzil.net/docs/text_license` on 2026-11-08** (quoted in §1.1) | ✅ Verified. Usable under the conditions in §1.1 |
 | T2 | **KFGQPC** (King Fahd Glorious Qur'an Printing Complex), developer resources (`qurancomplex.gov.sa/en/techquran/dev/`) | Hafs, **Warsh** (and other riwayat) | Official publisher. Offers Unicode Uthmanic text and fonts per riwaya. Published terms disagree (see §2). | `TODO-VERIFY`. **Preferred source for Warsh.** Written permission may be needed. |
 | T3 | `github.com/ibnhazm/KFGQPC` (unofficial mirror) | 9 riwayat incl. Warsh (v10) and Hafs (v18) | CSV/JSON/SQL/XML/XLSX text plus `.ttf`/`.woff2` fonts. Says "Quran Data from King Fahd Glorious Quran Printing Complex". **No LICENSE file.** | Use only to study the data format. Take the actual text from T2. |
 | T4 | `quran-ws/quran-text` (Packagist) | 7 riwayat incl. `warsh.json` | Pages, lines, waqf marks. License not seen. Upstream source unknown. | `TODO-VERIFY`. Not to be used until provenance is known. |
 | — | quran.com API v4 (used by the current backend) | Hafs only | Network API, so unusable offline in V1. Does not provide Warsh. | Not a V1 source |
+
+### 1.1 Tanzil terms (verbatim, 2026-11-08)
+> Tanzil Quran Text — Copyright (C) 2007-2021 Tanzil Project — License: Creative Commons Attribution 3.0
+> TERMS OF USE:
+> - Permission is granted to copy and distribute verbatim copies of this text, but CHANGING IT IS NOT ALLOWED.
+> - This Quran text can be used in any website or application, provided that its source (Tanzil Project) is clearly indicated, and a link is made to tanzil.net to enable users to keep track of changes.
+> - This copyright notice shall be included in all verbatim copies of the text, and shall be reproduced appropriately in all files derived from or containing substantial portion of this text.
+
+What this means for us:
+- The displayed `uthmani` column stays byte-identical to the source.
+- Every DB file carries the notice in its `meta` table.
+- The in-app attribution screen shows "Tanzil Project" and the address tanzil.net as text. V1 is
+  offline, so it is not a live link.
+- The `normalized` matching column is a derived file under the third term, so the notice is
+  reproduced in it too.
 
 Decisions to confirm (Phase 2):
 - **No text modification.** The DB stores `uthmani` byte-for-byte as received. The `normalized`
@@ -60,7 +75,9 @@ No external dataset. Rules are written in `assets/rules/{hafs,warsh}.yaml` from 
 
 ## 5. What Phase 2 needs from the product owner
 
-1. Either allow `tanzil.net` and `qurancomplex.gov.sa` in this cloud environment's network
-   settings, or download the files yourself and share them.
-2. A decision on the KFGQPC terms: proceed under the published terms, or write to the Complex
-   first.
+1. ~~Network access~~: done. A personal environment "quran-recitation" now allows tanzil.net and
+   the qurancomplex.gov.sa hosts. However, the KFGQPC servers themselves reject connections from
+   this cloud (TLS "unrecognized name" on fonts.*, HTTP 503 on the main site). If that persists,
+   the product owner downloads the KFGQPC files in a browser and shares them.
+2. ~~KFGQPC decision~~: decided. Build now and request written permission in parallel. Nothing
+   goes to the Play Store until the terms are clear or permission arrives.
