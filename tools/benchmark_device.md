@@ -27,8 +27,12 @@ Rules:
   install-time asset packs per tier. Nothing is downloaded at runtime in V1 (still no INTERNET).
 
 Test devices:
-- **Real phones decide**, one per tier at minimum. The product owner's phone is one data
-  point; its model and RAM are still to be given.
+- **Real phones decide**, one per tier at minimum.
+  - **High tier: Samsung Galaxy S25 FE** (product owner's phone). Expected Exynos 2400 and 8 GB
+    RAM; `TODO-VERIFY` on the device (Settings → About phone), and the app's tier probe will log
+    it too.
+  - **Mid and low tiers: no device yet.** Low-tier latency is the riskiest number, so a cheap
+    used Android 7–9 phone with 2–3 GB RAM would be the most valuable addition.
 - Emulators (API 24, 28, 34; x86_64) cover functional, UI and RTL tests only. They are not
   used for latency decisions.
 - A cloud device lab (e.g. Firebase Test Lab) would cover many real phones, but it is a paid
